@@ -1,0 +1,647 @@
+@use 'variables';
+
+* {
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+html {
+    background-color: variables.$bg-primary;
+    color: variables.$clr-white;
+}
+
+.ill {
+    @keyframes slide-in {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slide-out {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+
+    // Header
+    .app-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4rem;
+        background: variables.$bg-secondary;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .progressbar {
+        width: 100%;
+        height: 8px;
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+
+    .app-header-content {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        padding: 0 variables.$size-medium;
+        gap: variables.$size-medium;
+    }
+
+    .logo {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: variables.$size-small;
+        cursor: pointer;
+        font-weight: 500;
+        letter-spacing: 2px;
+    }
+
+    .logo-text {
+        display: flex;
+        flex-direction: column;
+        font-size: 0.75rem;
+        line-height: 1.2;
+    }
+
+    .search-bar {
+        color: variables.$clr-white;
+        background: transparent;
+        border: 1px solid variables.$clr-border;
+        border-radius: variables.$border-radius;
+        padding: variables.$size-small variables.$size-medium;
+        font-size: 0.9rem;
+        outline: none;
+        margin-left: auto;
+        width: 200px;
+
+        &:focus {
+            border-color: variables.$clr-cyan;
+        }
+
+        &:disabled {
+            opacity: 0.4;
+        }
+    }
+
+    // Sidebar
+    .app-sidebar {
+        position: sticky;
+        top: 4rem;
+        height: calc(100vh - 4rem);
+        min-width: 260px;
+        max-width: 260px;
+        border-inline-end: 1px solid variables.$clr-border;
+        padding: variables.$size-medium;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: variables.$size-medium;
+
+        &::-webkit-scrollbar {
+            width: 8px;
+        }
+        &::-webkit-scrollbar-track {
+            background: #1c1c1e;
+        }
+        &::-webkit-scrollbar-thumb {
+            background: #48484a;
+            border-radius: 4px;
+        }
+        &::-webkit-scrollbar-thumb:hover {
+            background: #636366;
+        }
+    }
+
+    .sidebar-stats {
+        p {
+            margin: 0.35rem 0;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+    }
+
+    // Badge / Filter labels
+    .badge {
+        background: variables.$bg-secondary;
+        border-radius: 15px;
+        padding: variables.$size-small variables.$size-medium;
+        font-size: 0.85rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+    }
+
+    // Tabs
+    .tabs-container {
+        display: flex;
+        padding: variables.$size-medium variables.$size-large;
+        gap: variables.$size-small;
+    }
+
+    .tab {
+        color: #666;
+        cursor: pointer;
+        flex: 1;
+        text-align: center;
+        padding: variables.$size-medium;
+        font-size: variables.$size-large;
+        border-radius: variables.$border-radius;
+        transition: background-color 0.15s ease, color 0.15s ease;
+
+        &:hover {
+            color: #999;
+        }
+    }
+
+    .tab-active {
+        color: inherit;
+        background-color: variables.$bg-secondary;
+    }
+
+    // Results container
+    .results-container {
+        flex: 1;
+        padding: 0 variables.$size-medium variables.$size-medium;
+        min-width: 0;
+    }
+
+    // Leaderboard entries
+    .leaderboard-entry {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem variables.$size-medium;
+        border-bottom: 1px solid variables.$clr-border;
+        gap: variables.$size-medium;
+        transition: background-color 0.1s ease;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        &.top-1 { border-left: 3px solid variables.$clr-gold; }
+        &.top-2 { border-left: 3px solid variables.$clr-silver; }
+        &.top-3 { border-left: 3px solid variables.$clr-bronze; }
+    }
+
+    .entry-rank {
+        min-width: 45px;
+        text-align: center;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #888;
+
+        &.rank-1 { color: variables.$clr-gold; }
+        &.rank-2 { color: variables.$clr-silver; }
+        &.rank-3 { color: variables.$clr-bronze; }
+    }
+
+    .entry-avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .entry-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 140px;
+        gap: 0.15rem;
+    }
+
+    .entry-username {
+        color: variables.$clr-white;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+
+    .entry-fullname {
+        font-size: 0.8rem;
+        color: #888;
+    }
+
+    .verified-badge {
+        display: inline-block;
+        background: #49adf4;
+        border-radius: 50%;
+        padding: 0.1rem 0.2rem;
+        font-size: 0.5em;
+        margin-left: 0.3rem;
+        vertical-align: middle;
+    }
+
+    .entry-likes-bar {
+        flex: 1;
+        height: 26px;
+        background: variables.$bg-secondary;
+        border-radius: 13px;
+        position: relative;
+        overflow: hidden;
+        min-width: 120px;
+    }
+
+    .likes-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, variables.$clr-cyan, #00cccc);
+        border-radius: 13px;
+        transition: width 0.3s ease;
+        min-width: 2px;
+    }
+
+    .likes-bar-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        white-space: nowrap;
+    }
+
+    .entry-percentage {
+        min-width: 60px;
+        text-align: right;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: variables.$clr-cyan;
+    }
+
+    // Scanning phase screen
+    .scanning-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 4rem);
+        padding-top: 4rem;
+    }
+
+    .scanning-phase {
+        text-align: center;
+        max-width: 520px;
+        padding: 2rem;
+        width: 100%;
+
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 500;
+            margin: 1rem 0;
+        }
+
+        .scanning-progress {
+            width: 100%;
+            height: 14px;
+            border-radius: 7px;
+            appearance: none;
+            -webkit-appearance: none;
+
+            &::-webkit-progress-bar {
+                background: variables.$bg-secondary;
+                border-radius: 7px;
+            }
+            &::-webkit-progress-value {
+                background: linear-gradient(90deg, variables.$clr-cyan, #00cccc);
+                border-radius: 7px;
+            }
+        }
+
+        .scanning-percentage {
+            font-size: 2rem;
+            font-weight: 700;
+            color: variables.$clr-cyan;
+            margin: 0.5rem 0;
+        }
+
+        .scanning-detail {
+            font-size: 0.85rem;
+            color: #888;
+            margin: 0.5rem 0;
+        }
+    }
+
+    .phase-indicator {
+        display: flex;
+        justify-content: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+
+        span {
+            padding: 0.5rem 1rem;
+            border-radius: variables.$border-radius;
+            background: variables.$bg-secondary;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+
+            &.active {
+                background: variables.$clr-cyan;
+                color: variables.$bg-primary;
+                font-weight: 600;
+            }
+
+            &.completed {
+                background: variables.$clr-green;
+                color: variables.$bg-primary;
+                font-weight: 600;
+            }
+        }
+    }
+
+    // Controls
+    .controls {
+        display: flex;
+        gap: variables.$size-small;
+        margin-top: variables.$size-medium;
+        justify-content: center;
+    }
+
+    .button-control {
+        background: #48484a;
+        border: none;
+        border-radius: variables.$border-radius;
+        padding: 0.6rem 1.5rem;
+        color: variables.$clr-white;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background-color 0.15s ease;
+
+        &:hover {
+            background: #636366;
+        }
+    }
+
+    // RUN button
+    button.run-scan {
+        background: transparent;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 2em;
+        height: 160px;
+        width: 160px;
+        border-radius: 50%;
+        border: 2px solid variables.$clr-cyan;
+        color: variables.$clr-cyan;
+        cursor: pointer;
+        font-weight: 600;
+        letter-spacing: 3px;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background: rgba(0, 255, 255, 0.1);
+            transform: translate(-50%, -50%) scale(1.05);
+        }
+    }
+
+    // Export buttons
+    .export-btn {
+        width: 100%;
+        padding: 0.6rem;
+        background: #48484a;
+        border: none;
+        border-radius: variables.$border-radius;
+        color: variables.$clr-white;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: background-color 0.15s ease;
+
+        &:hover {
+            background: #636366;
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+    }
+
+    // Sort controls
+    .sort-controls {
+        menu {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        p {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.85rem;
+            color: #aaa;
+            font-weight: 600;
+        }
+    }
+
+    .sort-direction-btn {
+        background: none;
+        border: 1px solid variables.$clr-border;
+        border-radius: variables.$border-radius;
+        color: variables.$clr-white;
+        padding: 0.4rem 0.8rem;
+        cursor: pointer;
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+
+        &:hover {
+            border-color: variables.$clr-cyan;
+        }
+    }
+
+    // Pagination
+    .sidebar-pagination {
+        p {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.85rem;
+            color: #aaa;
+            font-weight: 600;
+        }
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: variables.$size-medium;
+
+        a {
+            cursor: pointer;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            user-select: none;
+
+            &:hover {
+                background: variables.$bg-secondary;
+            }
+        }
+
+        span {
+            font-size: 0.9rem;
+        }
+    }
+
+    // Toast
+    .toast {
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        width: 100%;
+        max-width: 360px;
+        display: none;
+        justify-content: space-between;
+        align-items: center;
+        padding: variables.$size-medium;
+        border-radius: 6px;
+        z-index: 2;
+        box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
+        animation: slide-out 0.5s ease-in-out;
+        opacity: 0;
+
+        &.show {
+            animation: slide-in 0.5s ease-in-out;
+            display: flex;
+            opacity: 1;
+        }
+
+        &.success {
+            background-color: variables.$clr-green;
+            color: variables.$clr-white;
+        }
+
+        &.error {
+            background-color: variables.$clr-red;
+            color: variables.$clr-white;
+        }
+
+        &.info {
+            background-color: #2196f3;
+            color: variables.$clr-white;
+        }
+
+        &.warning {
+            background-color: #fdd835;
+            color: variables.$clr-black;
+        }
+    }
+
+    .toast__message {
+        margin: 0;
+        font-size: 0.9rem;
+    }
+
+    .toast__close-button {
+        background: none;
+        border: none;
+        color: inherit;
+        font-size: 1.3rem;
+        cursor: pointer;
+        padding: 0 0.3rem;
+    }
+
+    // Setting icon
+    .setting-icon {
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+    }
+
+    // Responsive
+    @media (max-width: 1024px) {
+        .app-sidebar {
+            min-width: 220px;
+            max-width: 220px;
+        }
+
+        .entry-info {
+            min-width: 110px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .app-sidebar {
+            min-width: 180px;
+            max-width: 180px;
+            padding: variables.$size-small;
+        }
+
+        .entry-info {
+            min-width: 90px;
+        }
+
+        .entry-likes-bar {
+            min-width: 80px;
+        }
+
+        .leaderboard-entry {
+            gap: variables.$size-small;
+            padding: 0.5rem variables.$size-small;
+        }
+
+        .entry-rank {
+            min-width: 35px;
+            font-size: 0.95rem;
+        }
+
+        .entry-avatar {
+            width: 36px;
+            height: 36px;
+        }
+
+        .entry-username {
+            font-size: 0.85rem;
+        }
+
+        .entry-percentage {
+            min-width: 50px;
+            font-size: 0.85rem;
+        }
+
+        .tab {
+            font-size: variables.$size-medium;
+            padding: variables.$size-small;
+        }
+
+        .search-bar {
+            width: 140px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .app-sidebar {
+            min-width: 150px;
+            max-width: 150px;
+        }
+
+        .entry-likes-bar {
+            display: none;
+        }
+
+        .phase-indicator {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .logo-text {
+            display: none;
+        }
+    }
+}

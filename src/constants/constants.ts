@@ -1,0 +1,14 @@
+export const INSTAGRAM_HOSTNAME = 'www.instagram.com';
+export const LEADERBOARD_ENTRIES_PER_PAGE = 50;
+export const MAX_RETRIES = 5;
+
+// Instagram Web App ID (required header for v1 API)
+export const IG_APP_ID = '936619743392459';
+
+// Timing defaults (ms)
+export const DEFAULT_TIME_BETWEEN_POST_FETCHES = 1000;
+export const DEFAULT_TIME_TO_WAIT_AFTER_SIX_POST_FETCHES = 10000;
+export const DEFAULT_TIME_BETWEEN_LIKER_FETCHES = 800;
+export const DEFAULT_TIME_TO_WAIT_AFTER_FIVE_LIKER_FETCHES = 8000;
+export const DEFAULT_TIME_BETWEEN_FOLLOWING_FETCHES = 1000;
+export const DEFAULT_TIME_TO_WAIT_AFTER_SIX_FOLLOWING_FETCHES = 10000;

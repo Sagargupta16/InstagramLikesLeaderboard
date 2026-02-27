@@ -1,0 +1,217 @@
+@use 'variables';
+
+@mixin main-layout {
+    max-width: 1300px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.with-app-header {
+    padding-top: 4rem;
+}
+
+// Flex
+.flex {
+    display: flex;
+
+    &.align-center {
+        align-items: center;
+    }
+
+    &.justify-center {
+        justify-content: center;
+    }
+
+    &.column {
+        flex-direction: column;
+    }
+
+    &.wrap {
+        flex-wrap: wrap;
+    }
+}
+
+.grow {
+    flex: 1;
+}
+
+// Padding
+.p-small { padding: variables.$size-small; }
+.p-medium { padding: variables.$size-medium; }
+.p-large { padding: variables.$size-large; }
+.p-xlarge { padding: variables.$size-xlarge; }
+.p-clear { padding: 0; }
+
+// Margin
+.m-small { margin: variables.$size-small; }
+.m-medium { margin: variables.$size-medium; }
+.m-large { margin: variables.$size-large; }
+.m-xlarge { margin: variables.$size-xlarge; }
+.m-clear { margin: 0; }
+
+// Font size
+.fs-small { font-size: variables.$size-small; }
+.fs-medium { font-size: variables.$size-medium; }
+.fs-large { font-size: variables.$size-large; }
+.fs-xlarge { font-size: variables.$size-xlarge; }
+
+// Colors
+.clr-red { color: variables.$clr-red; }
+.clr-green { color: variables.$clr-green; }
+.clr-cyan { color: variables.$clr-cyan; }
+.clr-inherit { color: inherit; }
+
+// Display
+.d-none { display: none; }
+.t-center { text-align: center; }
+.pos-relative { position: relative; }
+.w-100 { width: 100%; }
+
+// Backdrop & Modal
+.backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.setting-menu {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 700px;
+    max-height: 85vh;
+    overflow-y: auto;
+    background: #2c2c2e;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    z-index: 100;
+
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+    &::-webkit-scrollbar-track {
+        background: #1c1c1e;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: #48484a;
+        border-radius: 4px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+        background: #636366;
+    }
+}
+
+.settings-module {
+    .module-header h3 {
+        margin: 0 0 1rem 0;
+        font-size: 1.1rem;
+        color: variables.$clr-white;
+    }
+
+    .settings-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        label.minimun-width {
+            min-width: 280px;
+            font-size: 0.85rem;
+        }
+
+        input[type="number"] {
+            width: 100px;
+            padding: 0.4rem;
+            background: #1c1c1e;
+            border: 1px solid #48484a;
+            border-radius: 6px;
+            color: variables.$clr-white;
+            font-size: 0.85rem;
+        }
+
+        .margin-between-input-and-label {
+            font-size: 0.8rem;
+            color: #8e8e93;
+        }
+    }
+
+    .warning-container {
+        margin-top: 1rem;
+        padding: 0.75rem;
+        background: rgba(255, 59, 48, 0.1);
+        border: 1px solid rgba(255, 59, 48, 0.3);
+        border-radius: 8px;
+
+        .warning {
+            color: #ff6961;
+            font-size: 0.8rem;
+            margin: 0.25rem 0;
+        }
+    }
+}
+
+.btn-container {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.btn {
+    padding: 0.6rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: variables.$clr-white;
+    background: #007aff;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+        background: #0051d5;
+    }
+}
+
+// Responsive
+@media (max-width: 768px) {
+    .setting-menu {
+        width: 95%;
+    }
+
+    .settings-module .row {
+        flex-direction: column;
+        align-items: flex-start;
+
+        label.minimun-width {
+            min-width: auto;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            max-width: 150px;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .setting-menu {
+        width: 98%;
+        padding: 1rem;
+    }
+}
