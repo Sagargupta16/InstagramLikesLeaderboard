@@ -254,6 +254,7 @@ const App = () => {
             });
 
             const followingIds = new Set<string>();
+            const followingUsers: Record<string, LikerUserNode> = {};
             let followUrl = followingUrlGenerator();
             let followHasMore = true;
             let followRetries = 0;
@@ -282,7 +283,18 @@ const App = () => {
 
                 // v1 API response: { users: [...], big_list: bool, next_max_id: "...", status: "ok" }
                 const users = followData.users || [];
-                users.forEach((u: any) => followingIds.add(String(u.pk)));
+                users.forEach((u: any) => {
+                    const id = String(u.pk);
+                    followingIds.add(id);
+                    followingUsers[id] = {
+                        id,
+                        username: u.username,
+                        full_name: u.full_name || '',
+                        profile_pic_url: u.profile_pic_url || '',
+                        is_verified: u.is_verified || false,
+                        is_private: u.is_private || false,
+                    };
+                });
 
                 followHasMore = !!followData.next_max_id;
                 if (followHasMore) {
@@ -316,7 +328,7 @@ const App = () => {
             console.info(`Phase 3 complete: Following ${followingIds.size} users.`);
 
             // ==================== BUILD RESULTS ====================
-            const followingLeaderboard = buildLeaderboard(likerMap, followingIds, posts.length, true);
+            const followingLeaderboard = buildLeaderboard(likerMap, followingIds, posts.length, true, followingUsers);
             const notFollowingLeaderboard = buildLeaderboard(likerMap, followingIds, posts.length, false);
 
             setState({

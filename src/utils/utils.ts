@@ -92,8 +92,10 @@ export function buildLeaderboard(
     followingIds: ReadonlySet<string>,
     totalPosts: number,
     isFollowing: boolean,
+    followingUsersData?: Readonly<Record<string, LikerUserNode>>,
 ): LeaderboardEntry[] {
     const entries: LeaderboardEntry[] = [];
+    const addedIds = new Set<string>();
 
     for (const id of Object.keys(likerMap)) {
         const accumulator = likerMap[id];
@@ -110,6 +112,22 @@ export function buildLeaderboard(
             percentage: Math.round((accumulator.likesCount / totalPosts) * 1000) / 10,
             rank: 0,
         });
+        addedIds.add(id);
+    }
+
+    // For the "following" tab, include users who never liked any post (0 likes)
+    if (isFollowing && followingUsersData) {
+        for (const id of Object.keys(followingUsersData)) {
+            if (!addedIds.has(id)) {
+                entries.push({
+                    user: followingUsersData[id],
+                    likesCount: 0,
+                    totalPosts,
+                    percentage: 0,
+                    rank: 0,
+                });
+            }
+        }
     }
 
     // Default sort: by likesCount descending
