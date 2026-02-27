@@ -1,5 +1,9 @@
 # Instagram Likes Leaderboard
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![GitHub Pages](https://img.shields.io/badge/demo-live-00ffff?logo=github)](https://sagargupta.live/InstagramLikesLeaderboard/)
+[![GitHub stars](https://img.shields.io/github/stars/Sagargupta16/InstagramLikesLeaderboard?style=social)](https://github.com/Sagargupta16/InstagramLikesLeaderboard)
+
 Find out who likes your Instagram posts the most!
 
 This tool scans your posts and shows you a **ranked leaderboard** of your biggest fans — people you follow AND people you don't follow — sorted by how many of your posts they've liked.
