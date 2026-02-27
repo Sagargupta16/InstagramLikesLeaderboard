@@ -6,6 +6,8 @@ This tool scans your posts and shows you a **ranked leaderboard** of your bigges
 
 **No downloads, no installations, no sign-ups.** Just copy-paste one line into your browser and go.
 
+<img src="./assets/landing_page.png" alt="Landing page" />
+
 ---
 
 ## How to Use (Step by Step)
@@ -15,6 +17,8 @@ This tool scans your posts and shows you a **ranked leaderboard** of your bigges
 1. **Open the tool page:** [https://sagargupta.live/InstagramLikesLeaderboard/](https://sagargupta.live/InstagramLikesLeaderboard/)
 
 2. **Click the big "Copy Code" button** — this copies the script to your clipboard
+
+    <img src="./assets/copy_code.png" alt="Copy code confirmation" width="600" />
 
 3. **Go to Instagram** — open [instagram.com](https://www.instagram.com) and make sure you're logged in
 
