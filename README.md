@@ -6,12 +6,12 @@ See ranked leaderboards of your biggest fans — both people you follow and peop
 
 ## WARNING
 
-This tool utilizes Instagram's internal GraphQL API. Excessive use may result in temporary rate limits on your account.
+This tool utilizes Instagram's internal REST API. Excessive use may result in temporary rate limits on your account.
 The scan duration scales with the number of posts and likers on your account.
 
 ## Desktop Usage
 
-1. Go to the tool page and click the **COPY** button to copy the code
+1. Copy the code from: [Instagram Likes Leaderboard Tool](https://sagargupta.live/InstagramLikesLeaderboard/)
 
 2. Go to Instagram website and log in to your account
 
