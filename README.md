@@ -1,7 +1,7 @@
 # Instagram Likes Leaderboard
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![GitHub Pages](https://img.shields.io/badge/demo-live-00ffff?logo=github)](https://sagargupta.live/InstagramLikesLeaderboard/)
+[![GitHub Pages](https://img.shields.io/badge/demo-live-00ffff?logo=github)](https://sagargupta.online/InstagramLikesLeaderboard/)
 [![GitHub stars](https://img.shields.io/github/stars/Sagargupta16/InstagramLikesLeaderboard?style=social)](https://github.com/Sagargupta16/InstagramLikesLeaderboard)
 
 Find out who likes your Instagram posts the most!
@@ -18,7 +18,7 @@ This tool scans your posts and shows you a **ranked leaderboard** of your bigges
 
 ### On Desktop (Chrome, Edge, Firefox)
 
-1. **Open the tool page:** [https://sagargupta.live/InstagramLikesLeaderboard/](https://sagargupta.live/InstagramLikesLeaderboard/)
+1. **Open the tool page:** [https://sagargupta.online/InstagramLikesLeaderboard/](https://sagargupta.online/InstagramLikesLeaderboard/)
 
 2. **Click the big "Copy Code" button** — this copies the script to your clipboard
 
