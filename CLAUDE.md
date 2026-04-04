@@ -82,4 +82,4 @@ All requests go through `igFetch()` in `src/utils/utils.ts` which attaches the `
 
 ## Deployment
 
-GitHub Pages via GitHub Actions (`master` branch trigger). The workflow installs deps, runs `npm run build`, then deploys the `public/` directory.
+GitHub Pages via GitHub Actions (`main` branch trigger). The workflow installs deps, runs `npm run build`, then deploys the `public/` directory.
