@@ -1,11 +1,12 @@
 import { PostNode } from '../model/post';
 import { LikerAccumulator, LikerUserNode } from '../model/user';
 import { Timings } from '../model/timings';
-import { MAX_RETRIES } from '../constants/constants';
+import { PHASE_WARMUP_MS } from '../constants/constants';
 import {
     sleep,
     randomizedSleep,
-    igFetch,
+    rateLimitedFetch,
+    resetGlobalRequestCount,
     userMediaUrlGenerator,
     postLikersUrlGenerator,
     followingUrlGenerator,
@@ -31,28 +32,19 @@ export async function fetchAllPosts(
     let postUrl = userMediaUrlGenerator();
     let moreAvailable = true;
     let postCycle = 0;
-    let postRetries = 0;
+
+    resetGlobalRequestCount();
+    await sleep(PHASE_WARMUP_MS);
 
     while (moreAvailable) {
         let data: any;
         try {
-            const resp = await igFetch(postUrl);
-            if (!resp.ok) {
-                throw new Error(`HTTP ${resp.status}`);
-            }
-            data = await resp.json();
+            data = await rateLimitedFetch(postUrl, { onToast, pauseRef, label: 'Posts' });
         } catch (e) {
             console.error('Error fetching posts:', e);
-            postRetries++;
-            if (postRetries >= MAX_RETRIES) {
-                console.error('Max retries reached for posts. Continuing with what we have.');
-                break;
-            }
-            onToast({ show: true, text: `Retry ${postRetries}/${MAX_RETRIES} for posts...`, style: 'warning' });
-            await sleep(3000);
-            continue;
+            onToast({ show: true, text: 'Failed to fetch posts. Continuing with what we have.', style: 'error' });
+            break;
         }
-        postRetries = 0;
 
         const items = data.items || [];
         for (const item of items) {
@@ -108,29 +100,20 @@ export async function fetchAllLikers(
 ): Promise<Record<string, LikerAccumulator>> {
     let likerMap: Record<string, LikerAccumulator> = {};
 
+    onToast({ show: true, text: 'Warming up before fetching likers...', style: 'info' });
+    await sleep(PHASE_WARMUP_MS);
+    onToast({ show: false, text: '' });
+
     for (let i = 0; i < posts.length; i++) {
         const post = posts[i];
         const likerUrl = postLikersUrlGenerator(String(post.id));
-        let likerRetries = 0;
         let likerData: any;
 
-        while (likerRetries < MAX_RETRIES) {
-            try {
-                const resp = await igFetch(likerUrl);
-                if (!resp.ok) {
-                    throw new Error(`HTTP ${resp.status}`);
-                }
-                likerData = await resp.json();
-                break;
-            } catch (e) {
-                console.error(`Error fetching likers for post ${post.shortcode}:`, e);
-                likerRetries++;
-                if (likerRetries >= MAX_RETRIES) {
-                    console.warn(`Skipping likers for post ${post.shortcode} after ${MAX_RETRIES} retries`);
-                    likerData = null;
-                }
-                await sleep(3000);
-            }
+        try {
+            likerData = await rateLimitedFetch(likerUrl, { onToast, pauseRef, label: `Likers (${i + 1}/${posts.length})` });
+        } catch {
+            console.warn(`Skipping likers for post ${post.shortcode} after retries`);
+            likerData = null;
         }
 
         if (likerData && likerData.users) {
@@ -182,29 +165,21 @@ async function fetchUserList(
     const users: Record<string, LikerUserNode> = {};
     let url = urlGenerator();
     let hasMore = true;
-    let retries = 0;
     let cycle = 0;
+
+    onToast({ show: true, text: `Warming up before fetching ${label.toLowerCase()}...`, style: 'info' });
+    await sleep(PHASE_WARMUP_MS);
+    onToast({ show: false, text: '' });
 
     while (hasMore) {
         let data: any;
         try {
-            const resp = await igFetch(url);
-            if (!resp.ok) {
-                throw new Error(`HTTP ${resp.status}`);
-            }
-            data = await resp.json();
+            data = await rateLimitedFetch(url, { onToast, pauseRef, label });
         } catch (e) {
             console.error(`Error fetching ${label}:`, e);
-            retries++;
-            if (retries >= MAX_RETRIES) {
-                console.error(`Max retries reached for ${label}. Continuing with what we have.`);
-                break;
-            }
-            onToast({ show: true, text: `Retry ${retries}/${MAX_RETRIES} for ${label}...`, style: 'warning' });
-            await sleep(3000);
-            continue;
+            onToast({ show: true, text: `Failed to fetch ${label}. Continuing with what we have.`, style: 'error' });
+            break;
         }
-        retries = 0;
 
         const userList = data.users || [];
         userList.forEach((u: any) => {

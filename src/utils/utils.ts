@@ -1,7 +1,15 @@
 import { LikerUserNode, LikerAccumulator } from '../model/user';
 import { LeaderboardEntry } from '../model/leaderboard-entry';
 import { SortField } from '../model/sort-field';
-import { LEADERBOARD_ENTRIES_PER_PAGE, IG_APP_ID } from '../constants/constants';
+import {
+    LEADERBOARD_ENTRIES_PER_PAGE,
+    IG_APP_ID,
+    POSTS_PER_PAGE,
+    MAX_RETRIES,
+    RATE_LIMIT_COOLDOWN_MS,
+    GLOBAL_COOLDOWN_THRESHOLD,
+    GLOBAL_COOLDOWN_MS,
+} from '../constants/constants';
 
 // --- Core helpers ---
 
@@ -42,14 +50,97 @@ export function igFetch(url: string): Promise<Response> {
     });
 }
 
+// --- Rate-limit-aware fetch with exponential backoff ---
+
+interface RateLimitCallbacks {
+    readonly onToast: (toast: { show: boolean; text: string; style?: 'success' | 'error' | 'warning' | 'info' }) => void;
+    readonly pauseRef: { readonly current: boolean };
+    readonly label: string;
+}
+
+// Global request counter shared across all phases
+let globalRequestCount = 0;
+
+export function resetGlobalRequestCount(): void {
+    globalRequestCount = 0;
+}
+
+export async function rateLimitedFetch(
+    url: string,
+    callbacks: RateLimitCallbacks,
+): Promise<any> {
+    let retries = 0;
+
+    while (retries < MAX_RETRIES) {
+        // Global cooldown check
+        globalRequestCount++;
+        if (globalRequestCount >= GLOBAL_COOLDOWN_THRESHOLD) {
+            globalRequestCount = 0;
+            callbacks.onToast({ show: true, text: `Global cooldown ${GLOBAL_COOLDOWN_MS / 1000}s to stay safe...`, style: 'info' });
+            await sleep(GLOBAL_COOLDOWN_MS);
+            callbacks.onToast({ show: false, text: '' });
+        }
+
+        try {
+            const resp = await igFetch(url);
+
+            if (resp.status === 429) {
+                callbacks.onToast({
+                    show: true,
+                    text: `Rate limited! Pausing ${RATE_LIMIT_COOLDOWN_MS / 1000}s...`,
+                    style: 'warning',
+                });
+                await sleep(RATE_LIMIT_COOLDOWN_MS);
+                callbacks.onToast({ show: false, text: '' });
+                retries++;
+                continue;
+            }
+
+            if (resp.status === 401 || resp.status === 403) {
+                throw new Error(`Auth error (HTTP ${resp.status}) - session may have expired`);
+            }
+
+            if (!resp.ok) {
+                throw new Error(`HTTP ${resp.status}`);
+            }
+
+            return await resp.json();
+        } catch (e: any) {
+            // Auth errors should not be retried
+            if (e.message && (e.message.includes('Auth error') || e.message.includes('401') || e.message.includes('403'))) {
+                throw e;
+            }
+
+            retries++;
+            if (retries >= MAX_RETRIES) {
+                throw e;
+            }
+
+            // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+            const backoffMs = Math.pow(2, retries) * 1000;
+            console.warn(`${callbacks.label}: retry ${retries}/${MAX_RETRIES} in ${backoffMs / 1000}s...`, e);
+            callbacks.onToast({ show: true, text: `${callbacks.label}: retry ${retries}/${MAX_RETRIES} in ${backoffMs / 1000}s...`, style: 'warning' });
+            await sleep(backoffMs);
+            callbacks.onToast({ show: false, text: '' });
+
+            // Respect pause while retrying
+            while (callbacks.pauseRef.current) {
+                await sleep(1000);
+            }
+        }
+    }
+
+    throw new Error(`${callbacks.label}: max retries (${MAX_RETRIES}) exhausted`);
+}
+
 // --- URL generators (Instagram v1 REST API) ---
 
 export function userMediaUrlGenerator(nextMaxId?: string): string {
     const dsUserId = getCookie('ds_user_id');
     if (nextMaxId === undefined) {
-        return `https://www.instagram.com/api/v1/feed/user/${dsUserId}/?count=12`;
+        return `https://www.instagram.com/api/v1/feed/user/${dsUserId}/?count=${POSTS_PER_PAGE}`;
     }
-    return `https://www.instagram.com/api/v1/feed/user/${dsUserId}/?count=12&max_id=${nextMaxId}`;
+    return `https://www.instagram.com/api/v1/feed/user/${dsUserId}/?count=${POSTS_PER_PAGE}&max_id=${nextMaxId}`;
 }
 
 export function postLikersUrlGenerator(mediaId: string): string {

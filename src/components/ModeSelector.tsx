@@ -45,7 +45,7 @@ export const ModeSelector = ({ onScan, onLoadPrevious, savedScan }: ModeSelector
                     />
                     <div className='mode-option-content'>
                         <span className='mode-option-name'>Follower Analysis</span>
-                        <span className='mode-option-desc'>Who doesn't follow back, ghost followers, mutuals</span>
+                        <span className='mode-option-desc'>Who does not follow back, ghost followers, mutuals</span>
                     </div>
                 </label>
             </div>

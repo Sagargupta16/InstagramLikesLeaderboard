@@ -47,7 +47,7 @@ export function loadScanResults(): SavedScan | null {
 export function clearScanResults(): void {
     try {
         localStorage.removeItem(LOCAL_STORAGE_KEY);
-    } catch (_e) {
+    } catch {
         // ignore
     }
 }
