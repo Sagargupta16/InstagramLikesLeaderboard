@@ -20,13 +20,25 @@ export const Scanning = ({ state, scanningPaused, pauseScan }: ScanningProps) =>
                 return `Fetching likes... (Post ${state.currentPostIndex}/${state.posts.length})`;
             case 'fetching_following':
                 return `Fetching following list... (${state.followingCount})`;
+            case 'fetching_followers':
+                return `Fetching followers list... (${state.followerCount})`;
         }
     })();
 
+    const phases: Array<{ key: string; label: string }> = [
+        { key: 'fetching_posts', label: '1. Posts' },
+        { key: 'fetching_likes', label: '2. Likes' },
+        { key: 'fetching_following', label: '3. Following' },
+    ];
+
+    if (state.scanModes.followerAnalysis) {
+        phases.push({ key: 'fetching_followers', label: '4. Followers' });
+    }
+
     const getPhaseClass = (phaseTarget: string): string => {
-        const phases = ['fetching_posts', 'fetching_likes', 'fetching_following'];
-        const currentIdx = phases.indexOf(state.phase);
-        const targetIdx = phases.indexOf(phaseTarget);
+        const phaseKeys = phases.map(p => p.key);
+        const currentIdx = phaseKeys.indexOf(state.phase);
+        const targetIdx = phaseKeys.indexOf(phaseTarget);
 
         if (targetIdx < currentIdx) {
             return 'completed';
@@ -41,9 +53,9 @@ export const Scanning = ({ state, scanningPaused, pauseScan }: ScanningProps) =>
         <section className='scanning-container'>
             <div className='scanning-phase'>
                 <div className='phase-indicator'>
-                    <span className={getPhaseClass('fetching_posts')}>1. Posts</span>
-                    <span className={getPhaseClass('fetching_likes')}>2. Likes</span>
-                    <span className={getPhaseClass('fetching_following')}>3. Following</span>
+                    {phases.map(p => (
+                        <span key={p.key} className={getPhaseClass(p.key)}>{p.label}</span>
+                    ))}
                 </div>
                 <h2>{phaseLabel}</h2>
                 <progress className='scanning-progress' value={state.percentage} max={100} />

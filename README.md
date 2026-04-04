@@ -6,7 +6,7 @@
 
 Find out who likes your Instagram posts the most!
 
-This tool scans your posts and shows you a **ranked leaderboard** of your biggest fans - people you follow AND people you don't follow - sorted by how many of your posts they've liked.
+This tool scans your posts and shows you a **ranked leaderboard** of your biggest fans, a **stats dashboard** with engagement metrics, and a **follower analysis** showing who doesn't follow you back, ghost followers, and more.
 
 **No downloads, no installations, no sign-ups.** Just copy-paste one line into your browser and go.
 
@@ -33,18 +33,20 @@ This tool scans your posts and shows you a **ranked leaderboard** of your bigges
 
 5. **Paste the code** - click inside the console, press `Ctrl + V` (or `Cmd + V` on Mac), then press **Enter**
 
-6. **Click RUN** - Instagram will be replaced by the Likes Leaderboard interface with a big circular RUN button. Click it!
+6. **Choose your analysis modes** - the tool will show checkboxes for:
+   - **Likes Leaderboard** (always on) - ranked list of who likes your posts
+   - **Stats Dashboard** - engagement metrics, top fans, most liked post
+   - **Follower Analysis** - who doesn't follow back, ghost followers, mutuals
 
-7. **Wait for the scan** - the tool scans in 3 steps:
+7. **Click RUN** - the scan begins in up to 4 steps:
    - Step 1: Collects all your posts
    - Step 2: Checks who liked each post (this is the longest step)
    - Step 3: Gets your following list
+   - Step 4: Gets your followers list (only if Follower Analysis is selected)
 
    You'll see a progress bar and percentage for each step. You can **pause** anytime.
 
-8. **View your results!** Two tabs will appear:
-   - **Following** - people you follow, ranked by likes (includes people with 0 likes at the bottom)
-   - **Not Following** - people you DON'T follow who liked your posts
+8. **View your results!** Switch between views using the top navigation bar.
 
 ### On Android Mobile
 
@@ -61,13 +63,34 @@ Use Safari on your Mac to remotely debug Safari on your iPhone, or use a browser
 
 ## What You'll See
 
+### Likes Leaderboard
+
 Each person in the leaderboard shows:
 - **Rank** - #1, #2, #3 get trophy icons (gold, silver, bronze)
 - **Profile picture and username** - click to visit their profile
 - **Like bar** - visual bar showing how many of your posts they liked (e.g., 45/80)
 - **Percentage** - what percent of your posts they liked (e.g., 56.3%)
+- **Hide button** - click X to remove a user from the list
 
-### Sidebar Options
+### Stats Dashboard
+
+Overview of your account engagement:
+- **Total posts scanned** and **total likes** received
+- **Average likes per post** and **engagement rate**
+- **Follower/following ratio** and counts
+- **Most liked post** with caption preview
+- **Top 5 fans** - your biggest supporters at a glance
+
+### Follower Analysis
+
+Four tabs to understand your follower relationships:
+- **Don't Follow Back** - people you follow who don't follow you
+- **Not Following Back** - people who follow you but you don't follow
+- **Mutual** - people you follow who also follow you back
+- **Ghost Followers** - followers who have never liked any of your posts
+
+### Sidebar Options (Leaderboard)
+- **Filters** - hide verified/creator accounts, unhide hidden users
 - **Sort** by like count, percentage, or username
 - **Search** by name or username
 - **Export** your data as a spreadsheet (CSV) or data file (JSON)
@@ -75,6 +98,9 @@ Each person in the leaderboard shows:
 
 ### Settings (Gear Icon)
 Before running a scan, click the gear icon to adjust timing settings. The default settings are safe for most accounts. Only change these if you know what you're doing - lowering the delays too much can cause Instagram to temporarily restrict your account.
+
+### Load Previous Results
+If you've run a scan before, the tool saves your results in your browser. Next time you open it, you'll see a "Load previous results" button that lets you jump straight to your data without scanning again.
 
 ---
 
@@ -84,6 +110,7 @@ Before running a scan, click the gear icon to adjust timing settings. The defaul
 - **Safe to use** - the tool only reads data (who liked your posts). It does NOT like, unlike, follow, unfollow, or modify anything on your account.
 - **Be patient with large accounts** - if you have hundreds of posts, the scan will take a while because the tool intentionally pauses between requests to avoid Instagram rate limits.
 - **You can pause and resume** at any time during the scan.
+- **Results are saved** - your browser remembers your last scan, so you don't need to re-scan every time.
 - **Works on Chrome, Edge, Firefox, and Brave** on desktop.
 
 ---
@@ -105,19 +132,27 @@ A: No. The tool runs entirely in your browser. Instagram doesn't notify anyone.
 **Q: Do I need to install anything?**
 A: No. Just copy-paste the code into your browser console. No extensions, no downloads.
 
+**Q: Will my previous results be lost if I clear my browser data?**
+A: Yes. Results are stored in your browser's localStorage. Clearing site data for Instagram will remove saved results.
+
 ---
 
 ## Features
 
 - Scan all your posts and see who liked them the most
+- **Stats Dashboard** with engagement rate, avg likes, top fans, most liked post
+- **Follower Analysis** - ghost followers, don't follow back, not following back, mutuals
 - Two leaderboards: Following and Not Following
 - Trophy icons for top 3 (gold, silver, bronze)
 - Visual like-percentage bars
+- Filter out verified/creator accounts
+- Hide individual users from results
 - Sort by likes, percentage, or username
 - Search and filter results
 - Export as CSV (spreadsheet) or JSON (data file)
 - Adjustable scan speed settings
 - Pause and resume scanning
+- **Save and reload results** - no need to re-scan
 - Progress display with percentage for each phase
 - Dark theme interface
 - Works on desktop and mobile
@@ -132,8 +167,8 @@ A: No. Just copy-paste the code into your browser console. No extensions, no dow
 - **Install:** `npm install`
 - **Dev build:** `npm run build-dev`
 - **Production build:** `npm run build`
-- **API:** Uses Instagram's v1 REST API (`/api/v1/feed/user/`, `/api/v1/media/{id}/likers/`, `/api/v1/friendships/{id}/following/`)
-- **Output:** Single minified JS bundle (~72KB) embedded in `public/index.html`
+- **API:** Uses Instagram's v1 REST API (`/api/v1/feed/user/`, `/api/v1/media/{id}/likers/`, `/api/v1/friendships/{id}/following/`, `/api/v1/friendships/{id}/followers/`)
+- **Output:** Single minified JS bundle (~98KB) embedded in `public/index.html`
 - **Deployment:** Auto-deploys to GitHub Pages on push to `master`
 
 ---

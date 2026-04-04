@@ -564,6 +564,341 @@ html {
         align-items: center;
     }
 
+    // Mode selector (initial screen)
+    .mode-selector {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(100vh - 4rem);
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .mode-selector-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .mode-selector-subtitle {
+        color: #888;
+        font-size: 0.9rem;
+        margin-bottom: 2rem;
+    }
+
+    .mode-options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        width: 100%;
+        max-width: 400px;
+        margin-bottom: 2rem;
+    }
+
+    .mode-option {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: variables.$bg-secondary;
+        border: 1px solid variables.$clr-border;
+        border-radius: variables.$border-radius;
+        padding: 1rem;
+        cursor: pointer;
+        transition: border-color 0.15s ease;
+        text-align: left;
+
+        &:hover {
+            border-color: variables.$clr-cyan;
+        }
+
+        &.mode-option-locked {
+            opacity: 0.7;
+            cursor: default;
+
+            &:hover {
+                border-color: variables.$clr-border;
+            }
+        }
+
+        input[type="checkbox"] {
+            accent-color: variables.$clr-cyan;
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+    }
+
+    .mode-option-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .mode-option-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .mode-option-desc {
+        font-size: 0.8rem;
+        color: #888;
+    }
+
+    .run-scan-btn {
+        background: transparent;
+        font-size: 1.5em;
+        height: 120px;
+        width: 120px;
+        border-radius: 50%;
+        border: 2px solid variables.$clr-cyan;
+        color: variables.$clr-cyan;
+        cursor: pointer;
+        font-weight: 600;
+        letter-spacing: 3px;
+        transition: all 0.2s ease;
+        margin-bottom: 1rem;
+
+        &:hover {
+            background: rgba(0, 255, 255, 0.1);
+            transform: scale(1.05);
+        }
+    }
+
+    .load-previous-btn {
+        background: variables.$bg-secondary;
+        border: 1px solid variables.$clr-border;
+        border-radius: variables.$border-radius;
+        color: #aaa;
+        padding: 0.6rem 1.5rem;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.15s ease;
+
+        &:hover {
+            border-color: variables.$clr-cyan;
+            color: variables.$clr-white;
+        }
+    }
+
+    // Results nav (top-level view switcher)
+    .results-nav {
+        display: flex;
+        justify-content: center;
+        gap: 0.25rem;
+        padding: 0.75rem 1rem;
+        background: variables.$bg-secondary;
+        border-bottom: 1px solid variables.$clr-border;
+    }
+
+    .results-nav-item {
+        padding: 0.5rem 1.5rem;
+        border-radius: variables.$border-radius;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #888;
+        transition: all 0.15s ease;
+
+        &:hover {
+            color: #ccc;
+        }
+
+        &.results-nav-active {
+            background: variables.$bg-primary;
+            color: variables.$clr-cyan;
+        }
+    }
+
+    // Dashboard
+    .dashboard {
+        padding: 2rem;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: variables.$bg-secondary;
+        border: 1px solid variables.$clr-border;
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.3rem;
+
+        &.stat-card-highlight {
+            border-color: variables.$clr-cyan;
+        }
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: variables.$clr-cyan;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: #888;
+        text-align: center;
+    }
+
+    .dashboard-section {
+        margin-bottom: 2rem;
+
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #ccc;
+        }
+    }
+
+    .most-liked-card {
+        background: variables.$bg-secondary;
+        border: 1px solid variables.$clr-border;
+        border-radius: 12px;
+        padding: 1.25rem;
+    }
+
+    .most-liked-likes {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: variables.$clr-cyan;
+    }
+
+    .most-liked-caption {
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+        color: #aaa;
+        line-height: 1.4;
+    }
+
+    .top-fans {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .top-fan-entry {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: variables.$bg-secondary;
+        border-radius: variables.$border-radius;
+        padding: 0.75rem 1rem;
+    }
+
+    .top-fan-rank {
+        min-width: 35px;
+        text-align: center;
+        font-weight: 700;
+        color: #888;
+
+        &.rank-1 { color: variables.$clr-gold; }
+        &.rank-2 { color: variables.$clr-silver; }
+        &.rank-3 { color: variables.$clr-bronze; }
+    }
+
+    .top-fan-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .top-fan-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+    }
+
+    .top-fan-username {
+        color: variables.$clr-white;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+
+    .top-fan-detail {
+        font-size: 0.8rem;
+        color: variables.$clr-cyan;
+    }
+
+    // Follower analysis
+    .follower-tab {
+        font-size: 1rem !important;
+    }
+
+    .follower-search-input {
+        width: 100%;
+        color: variables.$clr-white;
+        background: variables.$bg-primary;
+        border: 1px solid variables.$clr-border;
+        border-radius: variables.$border-radius;
+        padding: variables.$size-small;
+        font-size: 0.85rem;
+        outline: none;
+
+        &:focus {
+            border-color: variables.$clr-cyan;
+        }
+    }
+
+    .follower-likes-info {
+        margin-left: auto;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    // Filter controls in leaderboard sidebar
+    .filter-controls {
+        p {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.85rem;
+            color: #aaa;
+            font-weight: 600;
+        }
+    }
+
+    .filter-toggle {
+        font-size: 0.8rem;
+
+        input[type="checkbox"] {
+            accent-color: variables.$clr-cyan;
+        }
+    }
+
+    // Hide button on leaderboard entries
+    .entry-hide-btn {
+        background: none;
+        border: none;
+        color: #555;
+        cursor: pointer;
+        font-size: 0.9rem;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        transition: all 0.15s ease;
+        flex-shrink: 0;
+
+        &:hover {
+            color: variables.$clr-red;
+            background: rgba(172, 38, 38, 0.15);
+        }
+    }
+
     // Responsive
     @media (max-width: 1024px) {
         .app-sidebar {
@@ -641,6 +976,32 @@ html {
         }
 
         .logo-text {
+            display: none;
+        }
+
+        .dashboard-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .results-nav {
+            flex-wrap: wrap;
+        }
+
+        .results-nav-item {
+            font-size: 0.8rem;
+            padding: 0.4rem 1rem;
+        }
+
+        .follower-tab {
+            font-size: 0.8rem !important;
+            padding: 0.4rem !important;
+        }
+
+        .mode-options {
+            max-width: 100%;
+        }
+
+        .entry-hide-btn {
             display: none;
         }
     }

@@ -5,4 +5,6 @@ export interface Timings {
     timeToWaitAfterFiveLikerFetches: number;
     timeBetweenFollowingFetches: number;
     timeToWaitAfterSixFollowingFetches: number;
+    timeBetweenFollowerFetches: number;
+    timeToWaitAfterSixFollowerFetches: number;
 }

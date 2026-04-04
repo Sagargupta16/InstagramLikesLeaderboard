@@ -64,6 +64,14 @@ export function followingUrlGenerator(nextMaxId?: string): string {
     return `https://www.instagram.com/api/v1/friendships/${dsUserId}/following/?count=200&max_id=${nextMaxId}`;
 }
 
+export function followersUrlGenerator(nextMaxId?: string): string {
+    const dsUserId = getCookie('ds_user_id');
+    if (nextMaxId === undefined) {
+        return `https://www.instagram.com/api/v1/friendships/${dsUserId}/followers/?count=200`;
+    }
+    return `https://www.instagram.com/api/v1/friendships/${dsUserId}/followers/?count=200&max_id=${nextMaxId}`;
+}
+
 // --- Aggregation ---
 
 export function buildLikerMap(

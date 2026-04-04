@@ -1,11 +1,14 @@
 import React from 'react';
+import { ScanModes } from '../model/scan-modes';
+import { ModeSelector } from './ModeSelector';
+import { SavedScan } from '../utils/storage';
 
 interface NotScanningProps {
-    onScan?: () => void;
+    onScan: (modes: ScanModes) => void;
+    onLoadPrevious: () => void;
+    savedScan: SavedScan | null;
 }
 
-export const NotScanning = ({ onScan }: NotScanningProps) => (
-    <button className='run-scan' onClick={onScan}>
-        RUN
-    </button>
+export const NotScanning = ({ onScan, onLoadPrevious, savedScan }: NotScanningProps) => (
+    <ModeSelector onScan={onScan} onLoadPrevious={onLoadPrevious} savedScan={savedScan} />
 );

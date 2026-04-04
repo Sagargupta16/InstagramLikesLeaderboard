@@ -1,5 +1,3 @@
-import { PageInfo } from './user';
-
 export interface PostNode {
     readonly id: string;
     readonly shortcode: string;
@@ -9,10 +7,4 @@ export interface PostNode {
     };
     readonly thumbnail_src: string;
     readonly taken_at_timestamp: number;
-}
-
-export interface TimelineMediaResponse {
-    readonly count: number;
-    readonly page_info: PageInfo;
-    readonly edges: ReadonlyArray<{ readonly node: PostNode }>;
 }

@@ -25,7 +25,19 @@ export const Leaderboard = ({ state, setState }: LeaderboardProps) => {
         ? state.followingLeaderboard
         : state.notFollowingLeaderboard;
 
-    const sorted = sortLeaderboard(currentEntries, state.sortBy, state.sortDirection);
+    // Apply verified filter
+    let entries = currentEntries;
+    if (state.hideVerified) {
+        entries = entries.filter(e => !e.user.is_verified);
+    }
+
+    // Apply hidden users filter
+    if (state.hiddenUsers.length > 0) {
+        const hiddenSet = new Set(state.hiddenUsers);
+        entries = entries.filter(e => !hiddenSet.has(e.user.id));
+    }
+
+    const sorted = sortLeaderboard(entries, state.sortBy, state.sortDirection);
     const filtered = filterLeaderboard(sorted, state.searchTerm);
     const pageEntries = getEntriesForPage(filtered, state.page);
     const maxPage = getMaxPage(filtered.length);
@@ -35,11 +47,7 @@ export const Leaderboard = ({ state, setState }: LeaderboardProps) => {
         if (state.status !== 'results') {
             return;
         }
-        setState({
-            ...state,
-            sortBy,
-            page: 1,
-        });
+        setState({ ...state, sortBy, page: 1 });
     };
 
     const toggleSortDirection = () => {
@@ -53,6 +61,13 @@ export const Leaderboard = ({ state, setState }: LeaderboardProps) => {
         });
     };
 
+    const hideUser = (userId: string) => {
+        if (state.status !== 'results') {
+            return;
+        }
+        setState({ ...state, hiddenUsers: [...state.hiddenUsers, userId] });
+    };
+
     return (
         <section className='flex'>
             <aside className='app-sidebar'>
@@ -63,6 +78,35 @@ export const Leaderboard = ({ state, setState }: LeaderboardProps) => {
                     <p>Total likes: {state.totalLikes}</p>
                     <p>Following who liked: {state.followingLeaderboard.length}</p>
                     <p>Non-following who liked: {state.notFollowingLeaderboard.length}</p>
+                </div>
+
+                {/* Filters */}
+                <div className='filter-controls'>
+                    <p>Filters</p>
+                    <label className='badge m-small filter-toggle'>
+                        <input
+                            type='checkbox'
+                            checked={state.hideVerified}
+                            onChange={() => {
+                                if (state.status === 'results') {
+                                    setState({ ...state, hideVerified: !state.hideVerified, page: 1 });
+                                }
+                            }}
+                        />
+                        &nbsp;Hide verified accounts
+                    </label>
+                    {state.hiddenUsers.length > 0 && (
+                        <button
+                            className='sort-direction-btn'
+                            onClick={() => {
+                                if (state.status === 'results') {
+                                    setState({ ...state, hiddenUsers: [], page: 1 });
+                                }
+                            }}
+                        >
+                            Unhide all ({state.hiddenUsers.length})
+                        </button>
+                    )}
                 </div>
 
                 {/* Sort controls */}
@@ -229,6 +273,13 @@ export const Leaderboard = ({ state, setState }: LeaderboardProps) => {
                                 </span>
                             </div>
                             <div className='entry-percentage'>{entry.percentage}%</div>
+                            <button
+                                className='entry-hide-btn'
+                                onClick={() => hideUser(entry.user.id)}
+                                title='Hide this user'
+                            >
+                                &#10005;
+                            </button>
                         </div>
                     );
                 })}

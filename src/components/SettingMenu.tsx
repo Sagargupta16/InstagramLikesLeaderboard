@@ -18,6 +18,8 @@ export const SettingMenu = ({
     const [timeToWaitAfterFiveLikerFetches, setTimeToWaitAfterFiveLikerFetches] = useState(currentTimings.timeToWaitAfterFiveLikerFetches);
     const [timeBetweenFollowingFetches, setTimeBetweenFollowingFetches] = useState(currentTimings.timeBetweenFollowingFetches);
     const [timeToWaitAfterSixFollowingFetches, setTimeToWaitAfterSixFollowingFetches] = useState(currentTimings.timeToWaitAfterSixFollowingFetches);
+    const [timeBetweenFollowerFetches, setTimeBetweenFollowerFetches] = useState(currentTimings.timeBetweenFollowerFetches);
+    const [timeToWaitAfterSixFollowerFetches, setTimeToWaitAfterSixFollowerFetches] = useState(currentTimings.timeToWaitAfterSixFollowerFetches);
 
     const handleSave = (event: any) => {
         event.preventDefault();
@@ -28,6 +30,8 @@ export const SettingMenu = ({
             timeToWaitAfterFiveLikerFetches,
             timeBetweenFollowingFetches,
             timeToWaitAfterSixFollowingFetches,
+            timeBetweenFollowerFetches,
+            timeToWaitAfterSixFollowerFetches,
         });
         setSettingState(false);
     };
@@ -115,6 +119,30 @@ export const SettingMenu = ({
                                     max={999999}
                                     value={timeToWaitAfterSixFollowingFetches}
                                     onChange={e => handleInputChange(e, setTimeToWaitAfterSixFollowingFetches)}
+                                />
+                                <label className='margin-between-input-and-label'>(ms)</label>
+                            </div>
+
+                            <div className='row'>
+                                <label className='minimun-width'>Time between follower fetches</label>
+                                <input
+                                    type='number'
+                                    min={500}
+                                    max={999999}
+                                    value={timeBetweenFollowerFetches}
+                                    onChange={e => handleInputChange(e, setTimeBetweenFollowerFetches)}
+                                />
+                                <label className='margin-between-input-and-label'>(ms)</label>
+                            </div>
+
+                            <div className='row'>
+                                <label className='minimun-width'>Sleep after 6 follower fetches</label>
+                                <input
+                                    type='number'
+                                    min={4000}
+                                    max={999999}
+                                    value={timeToWaitAfterSixFollowerFetches}
+                                    onChange={e => handleInputChange(e, setTimeToWaitAfterSixFollowerFetches)}
                                 />
                                 <label className='margin-between-input-and-label'>(ms)</label>
                             </div>
