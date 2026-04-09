@@ -1,5 +1,10 @@
 # Instagram Likes Leaderboard
 
+![GitHub stars](https://img.shields.io/github/stars/Sagargupta16/InstagramLikesLeaderboard?style=flat-square)
+![GitHub forks](https://img.shields.io/github/forks/Sagargupta16/InstagramLikesLeaderboard?style=flat-square)
+![License](https://img.shields.io/github/license/Sagargupta16/InstagramLikesLeaderboard?style=flat-square)
+![Last Commit](https://img.shields.io/github/last-commit/Sagargupta16/InstagramLikesLeaderboard?style=flat-square)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GitHub Pages](https://img.shields.io/badge/demo-live-00ffff?logo=github)](https://sagargupta.online/InstagramLikesLeaderboard/)
 [![GitHub stars](https://img.shields.io/github/stars/Sagargupta16/InstagramLikesLeaderboard?style=social)](https://github.com/Sagargupta16/InstagramLikesLeaderboard)
@@ -170,6 +175,17 @@ A: Yes. Results are stored in your browser's localStorage. Clearing site data fo
 - **API:** Uses Instagram's v1 REST API (`/api/v1/feed/user/`, `/api/v1/media/{id}/likers/`, `/api/v1/friendships/{id}/following/`, `/api/v1/friendships/{id}/followers/`)
 - **Output:** Single minified JS bundle (~98KB) embedded in `public/index.html`
 - **Deployment:** Auto-deploys to GitHub Pages on push to `master`
+
+---
+
+## More Projects
+
+| Project | Description |
+|---------|-------------|
+| [claude-cost-optimizer](https://github.com/Sagargupta16/claude-cost-optimizer) | Save 30-60% on Claude Code costs - proven strategies and benchmarks |
+| [Financial Dashboard](https://github.com/Sagargupta16/Financial-Dashboard) | Modern React financial dashboard with analytics and data visualization |
+| [LeetCode Rating Predictor](https://github.com/Sagargupta16/LeetCode_Rating_Predictor) | Full-stack ML-powered LeetCode contest rating predictor |
+| [GitScope](https://github.com/Sagargupta16/GitScope) | Browser extension adding contribution insights to GitHub profiles |
 
 ---
 
