@@ -6,3 +6,11 @@ dist/
 bun.lockb
 .superpowers/
 docs/superpowers/
+
+# Added for consistency
+.env
+.env.local
+.env.*.local
+*.log
+Thumbs.db
+.next/
