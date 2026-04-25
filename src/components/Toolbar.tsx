@@ -33,12 +33,11 @@ export const Toolbar = ({
                 />
             )}
             <div className='app-header-content'>
-                <div
+                <button
+                    type='button'
                     className='logo'
+                    disabled={isActiveProcess}
                     onClick={() => {
-                        if (isActiveProcess) {
-                            return;
-                        }
                         switch (state.status) {
                             case 'initial':
                                 if (confirm('Go back to Instagram?')) {
@@ -59,7 +58,7 @@ export const Toolbar = ({
                         <span>Instagram</span>
                         <span>Likes Leaderboard</span>
                     </div>
-                </div>
+                </button>
 
                 {state.status === 'initial' && (
                     <SettingIcon onClickLogo={() => { setSettingMenu(true); }} />

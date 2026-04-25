@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { State } from '../model/state';
 import { FollowerTab } from '../model/follower-tab';
 import { LikerUserNode } from '../model/user';
@@ -9,11 +9,9 @@ interface FollowerAnalysisProps {
     setState: (state: State) => void;
 }
 
-export const FollowerAnalysis = ({ state, setState }: FollowerAnalysisProps) => {
-    if (state.status !== 'results') {
-        return null;
-    }
+type ResultsState = Extract<State, { status: 'results' }>;
 
+const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setState: (s: State) => void }) => {
     const {
         followerIds,
         followingIds,
@@ -25,62 +23,71 @@ export const FollowerAnalysis = ({ state, setState }: FollowerAnalysisProps) => 
         followerPage,
     } = state;
 
-    const followerSet = new Set(followerIds);
-    const followingSet = new Set(followingIds);
+    const categories = useMemo(() => {
+        const followerSet = new Set(followerIds);
+        const followingSet = new Set(followingIds);
+        return {
+            dontFollowBack: followingIds.filter(id => !followerSet.has(id)),
+            notFollowingBack: followerIds.filter(id => !followingSet.has(id)),
+            mutual: followingIds.filter(id => followerSet.has(id)),
+            ghost: followerIds.filter(id => !likerMap[id]),
+        };
+    }, [followerIds, followingIds, likerMap]);
 
-    // Compute each category
-    const dontFollowBack = followingIds.filter(id => !followerSet.has(id));
-    const notFollowingBack = followerIds.filter(id => !followingSet.has(id));
-    const mutual = followingIds.filter(id => followerSet.has(id));
-    const ghostFollowers = followerIds.filter(id => !likerMap[id]);
+    const currentIds = useMemo(() => {
+        switch (followerTab) {
+            case 'dont_follow_back':
+                return categories.dontFollowBack;
+            case 'not_following_back':
+                return categories.notFollowingBack;
+            case 'mutual':
+                return categories.mutual;
+            case 'ghost':
+                return categories.ghost;
+        }
+    }, [followerTab, categories]);
 
-    const getUsers = (ids: readonly string[]): LikerUserNode[] =>
-        ids.map(id => followerUsers[id] || followingUsers[id]).filter(Boolean);
+    const allUsers = useMemo<LikerUserNode[]>(
+        () => currentIds
+            .map(id => followerUsers[id] || followingUsers[id])
+            .filter(Boolean),
+        [currentIds, followerUsers, followingUsers],
+    );
 
-    let currentIds: readonly string[];
-    switch (followerTab) {
-        case 'dont_follow_back':
-            currentIds = dontFollowBack;
-            break;
-        case 'not_following_back':
-            currentIds = notFollowingBack;
-            break;
-        case 'mutual':
-            currentIds = mutual;
-            break;
-        case 'ghost':
-            currentIds = ghostFollowers;
-            break;
-    }
-
-    let users = getUsers(currentIds);
-
-    // Search filter
-    if (followerSearchTerm) {
+    const filteredUsers = useMemo(() => {
+        if (!followerSearchTerm) { return allUsers; }
         const term = followerSearchTerm.toLowerCase();
-        users = users.filter(u =>
+        return allUsers.filter(u =>
             u.username.toLowerCase().includes(term) ||
             u.full_name.toLowerCase().includes(term),
         );
-    }
+    }, [allUsers, followerSearchTerm]);
 
-    const totalPages = Math.max(1, Math.ceil(users.length / LEADERBOARD_ENTRIES_PER_PAGE));
-    const pageUsers = users.slice(
-        (followerPage - 1) * LEADERBOARD_ENTRIES_PER_PAGE,
-        followerPage * LEADERBOARD_ENTRIES_PER_PAGE,
+    const totalPages = Math.max(1, Math.ceil(filteredUsers.length / LEADERBOARD_ENTRIES_PER_PAGE));
+
+    const pageUsers = useMemo(
+        () => filteredUsers.slice(
+            (followerPage - 1) * LEADERBOARD_ENTRIES_PER_PAGE,
+            followerPage * LEADERBOARD_ENTRIES_PER_PAGE,
+        ),
+        [filteredUsers, followerPage],
     );
 
     const setTab = (tab: FollowerTab) => {
-        if (state.status === 'results') {
-            setState({ ...state, followerTab: tab, followerPage: 1, followerSearchTerm: '' });
-        }
+        setState({ ...state, followerTab: tab, followerPage: 1, followerSearchTerm: '' });
+    };
+
+    const changePage = (delta: number) => {
+        const next = followerPage + delta;
+        if (next < 1 || next > totalPages) { return; }
+        setState({ ...state, followerPage: next });
     };
 
     const tabs: Array<{ key: FollowerTab; label: string; count: number }> = [
-        { key: 'dont_follow_back', label: "Don't Follow Back", count: dontFollowBack.length },
-        { key: 'not_following_back', label: 'Not Following Back', count: notFollowingBack.length },
-        { key: 'mutual', label: 'Mutual', count: mutual.length },
-        { key: 'ghost', label: 'Ghost Followers', count: ghostFollowers.length },
+        { key: 'dont_follow_back', label: "Don't Follow Back", count: categories.dontFollowBack.length },
+        { key: 'not_following_back', label: 'Not Following Back', count: categories.notFollowingBack.length },
+        { key: 'mutual', label: 'Mutual', count: categories.mutual.length },
+        { key: 'ghost', label: 'Ghost Followers', count: categories.ghost.length },
     ];
 
     return (
@@ -89,7 +96,7 @@ export const FollowerAnalysis = ({ state, setState }: FollowerAnalysisProps) => 
                 <div className='sidebar-stats'>
                     <p>Followers: {followerIds.length}</p>
                     <p>Following: {followingIds.length}</p>
-                    <p>Mutual: {mutual.length}</p>
+                    <p>Mutual: {categories.mutual.length}</p>
                 </div>
 
                 <div className='follower-search'>
@@ -98,36 +105,36 @@ export const FollowerAnalysis = ({ state, setState }: FollowerAnalysisProps) => 
                         className='follower-search-input'
                         placeholder='Search users...'
                         value={followerSearchTerm}
-                        onChange={e => {
-                            if (state.status === 'results') {
-                                setState({ ...state, followerSearchTerm: e.currentTarget.value, followerPage: 1 });
-                            }
-                        }}
+                        onChange={e => setState({
+                            ...state,
+                            followerSearchTerm: e.currentTarget.value,
+                            followerPage: 1,
+                        })}
                     />
                 </div>
 
                 <div className='sidebar-pagination'>
                     <p>Pages</p>
                     <div className='pagination-controls'>
-                        <a
-                            onClick={() => {
-                                if (state.status === 'results' && followerPage > 1) {
-                                    setState({ ...state, followerPage: followerPage - 1 });
-                                }
-                            }}
+                        <button
+                            type='button'
+                            className='pagination-btn'
+                            onClick={() => changePage(-1)}
+                            disabled={followerPage <= 1}
+                            aria-label='Previous page'
                         >
                             &#10094;
-                        </a>
+                        </button>
                         <span>{followerPage}&nbsp;/&nbsp;{totalPages}</span>
-                        <a
-                            onClick={() => {
-                                if (state.status === 'results' && followerPage < totalPages) {
-                                    setState({ ...state, followerPage: followerPage + 1 });
-                                }
-                            }}
+                        <button
+                            type='button'
+                            className='pagination-btn'
+                            onClick={() => changePage(1)}
+                            disabled={followerPage >= totalPages}
+                            aria-label='Next page'
                         >
                             &#10095;
-                        </a>
+                        </button>
                     </div>
                 </div>
             </aside>
@@ -135,18 +142,19 @@ export const FollowerAnalysis = ({ state, setState }: FollowerAnalysisProps) => 
             <article className='results-container'>
                 <nav className='tabs-container'>
                     {tabs.map(t => (
-                        <div
+                        <button
+                            type='button'
                             key={t.key}
                             className={`tab follower-tab ${followerTab === t.key ? 'tab-active' : ''}`}
                             onClick={() => setTab(t.key)}
                         >
                             {t.label} ({t.count})
-                        </div>
+                        </button>
                     ))}
                 </nav>
 
                 {pageUsers.length === 0 && (
-                    <div className='p-large t-center' style={{ color: '#888' }}>
+                    <div className='empty-state'>
                         {followerSearchTerm ? 'No results match your search.' : 'No users in this category.'}
                     </div>
                 )}
@@ -159,6 +167,7 @@ export const FollowerAnalysis = ({ state, setState }: FollowerAnalysisProps) => 
                                 className='entry-avatar'
                                 alt={user.username}
                                 src={user.profile_pic_url}
+                                loading='lazy'
                             />
                             <div className='entry-info'>
                                 <a
@@ -172,11 +181,8 @@ export const FollowerAnalysis = ({ state, setState }: FollowerAnalysisProps) => 
                                 </a>
                                 <span className='entry-fullname'>{user.full_name}</span>
                             </div>
-                            <div className='follower-likes-info'>
-                                {likes > 0
-                                    ? <span className='clr-cyan'>{likes} likes</span>
-                                    : <span style={{ color: '#666' }}>0 likes</span>
-                                }
+                            <div className={`follower-likes-info ${likes === 0 ? 'follower-likes-empty' : ''}`}>
+                                {likes} likes
                             </div>
                         </div>
                     );
@@ -184,4 +190,11 @@ export const FollowerAnalysis = ({ state, setState }: FollowerAnalysisProps) => 
             </article>
         </section>
     );
+};
+
+export const FollowerAnalysis = ({ state, setState }: FollowerAnalysisProps) => {
+    if (state.status !== 'results') {
+        return null;
+    }
+    return <FollowerAnalysisInner state={state} setState={setState} />;
 };

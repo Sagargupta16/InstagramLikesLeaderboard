@@ -9,16 +9,17 @@ A browser-based Instagram analyzer that scans your posts and provides three view
 ## Commands
 
 - **Install:** `npm install`
-- **Dev build + serve:** `npm run build-dev` (webpack build then dev server)
-- **Production build:** `npm run build` (webpack build + embed bundle into `public/index.html`)
+- **Dev build + serve:** `npm run build-dev` (full `build` + embed, then `webpack serve --mode development`)
+- **Production build:** `npm run build` (webpack build + `update-readme` embeds bundle into `public/index.html`)
 - **Webpack only:** `npm run webpack-build`
-- **Lint:** `npm run lint` (strict rules in `.eslintrc.json`)
+- **Re-embed bundle only:** `npm run update-readme` (runs `scripts/update-index.js`)
+- **Lint:** `npm run lint` (ESLint v9 flat config in `eslint.config.js`)
 
 There are no tests.
 
 ## Build Pipeline
 
-Webpack compiles `src/main.tsx` into `dist/dist.js` (single minified bundle). Then `scripts/update-index.js` reads the bundle, escapes it, and injects it into `public/index.html` as a string constant (`instagramScript`). The landing page shows a "Copy Code" button that copies this embedded script to the clipboard. GitHub Actions deploys `public/` to GitHub Pages on push to `master`.
+Webpack compiles `src/main.tsx` into `dist/dist.js` (single minified bundle). Then `scripts/update-index.js` reads the bundle, escapes it, and injects it into `public/index.html` as a string constant (`instagramScript`). The landing page shows a "Copy Code" button that copies this embedded script to the clipboard. GitHub Actions (`.github/workflows/build_and_deploy_pages.yaml`) deploys `public/` to GitHub Pages on push to `main`.
 
 ## Architecture
 
@@ -69,7 +70,7 @@ All requests go through `igFetch()` in `src/utils/utils.ts` which attaches the `
 - `src/utils/storage.ts` - localStorage persistence for scan results
 - `src/constants/constants.ts` - timing defaults, retry limits, IG app ID
 - `src/model/` - TypeScript types (State, ScanModes, ResultsView, FollowerTab, etc.)
-- `src/components/` - UI components (ModeSelector, Dashboard, Leaderboard, FollowerAnalysis, ResultsNav, Scanning, Toolbar, SettingMenu, Toast)
+- `src/components/` - UI components (ModeSelector, Dashboard, Leaderboard, FollowerAnalysis, ResultsNav, Scanning, NotScanning, Toolbar, SettingMenu, Toast)
 - `scripts/update-index.js` - post-build script that embeds the bundle into the landing page
 
 ## Style Rules
@@ -82,4 +83,4 @@ All requests go through `igFetch()` in `src/utils/utils.ts` which attaches the `
 
 ## Deployment
 
-GitHub Pages via GitHub Actions (`main` branch trigger). The workflow installs deps, runs `npm run build`, then deploys the `public/` directory.
+GitHub Pages via GitHub Actions (`main` branch trigger). The workflow installs deps with `npm install`, runs `npm run build`, uploads `public/` as a Pages artifact, and deploys via `actions/deploy-pages@v4`.

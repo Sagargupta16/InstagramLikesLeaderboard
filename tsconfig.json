@@ -13,9 +13,11 @@
         "esModuleInterop": true,
         "sourceMap": false,
         "baseUrl": "src/",
-        "target": "es5",
+        "target": "es2020",
+        "module": "esnext",
+        "moduleResolution": "node",
         "outDir": "dist",
-        "lib": ["dom", "scripthost", "es2015"],
+        "lib": ["dom", "scripthost", "es2020"],
         "paths": {
             "react": ["../node_modules/preact/compat"],
             "react-dom": ["../node_modules/preact/compat"]

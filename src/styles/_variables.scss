@@ -1,25 +1,91 @@
-// Colors
-$clr-red: #ac2626;
-$clr-green: #56d756;
-$clr-cyan: #00ffff;
-$clr-white: #ffffff;
-$clr-black: #111111;
-$clr-gray: #222222;
-$clr-border: #333333;
-$clr-gold: #ffd700;
-$clr-silver: #c0c0c0;
-$clr-bronze: #cd7f32;
+// ============================================================
+// Design tokens
+// ============================================================
 
-// Background Colors
-$bg-primary: $clr-black;
-$bg-secondary: $clr-gray;
+// --- Neutrals (dark UI ramp) ---
+$neutral-0:   #0a0a0b;  // deepest bg
+$neutral-50:  #111113;  // bg primary
+$neutral-100: #17171a;  // surface 1
+$neutral-200: #1e1e22;  // surface 2
+$neutral-300: #27272c;  // surface 3 / hover
+$neutral-400: #3a3a42;  // border strong
+$neutral-500: #55555e;  // muted icon
+$neutral-600: #7a7a85;  // muted text
+$neutral-700: #a1a1ac;  // subtle text
+$neutral-800: #d4d4dc;  // body
+$neutral-900: #f5f5f7;  // emphasis
 
-// Sizes
-$size-small: 0.5rem;
-$size-medium: 1rem;
-$size-large: 1.5rem;
-$size-xlarge: 2rem;
+// --- Semantic colors ---
+$clr-accent:        #5eead4;  // muted teal (primary accent)
+$clr-accent-strong: #2dd4bf;  // hover / active
+$clr-accent-soft:   rgba(94, 234, 212, 0.12); // soft fills
 
-// Borders
-$border-radius: 8px;
-$border-color: $clr-border;
+$clr-danger:  #f87171;
+$clr-success: #4ade80;
+$clr-warning: #fbbf24;
+$clr-info:    #60a5fa;
+$clr-verified: #4cb5f9;
+
+$clr-gold:   #fbbf24;
+$clr-silver: #cbd5e1;
+$clr-bronze: #d97706;
+
+// --- Legacy aliases (kept so nothing breaks while we migrate) ---
+$clr-red:    $clr-danger;
+$clr-green:  $clr-success;
+$clr-cyan:   $clr-accent;
+$clr-white:  $neutral-900;
+$clr-black:  $neutral-50;
+$clr-gray:   $neutral-200;
+$clr-border: $neutral-400;
+
+// --- Text ---
+$text-primary: $neutral-900;
+$text-body:    $neutral-800;
+$text-subtle:  $neutral-700;
+$text-muted:   $neutral-600;
+$text-faint:   $neutral-500;
+
+// --- Surfaces ---
+$bg-primary:   $neutral-50;
+$bg-secondary: $neutral-200;
+$bg-surface-1: $neutral-100;
+$bg-surface-2: $neutral-200;
+$bg-surface-3: $neutral-300;
+$bg-overlay:   rgba(0, 0, 0, 0.55);
+
+// --- Borders ---
+$border-subtle: rgba(255, 255, 255, 0.06);
+$border-soft:   $neutral-300;
+$border-strong: $neutral-400;
+$border-color:  $border-soft;
+
+// --- Spacing ---
+$size-xxsmall: 0.25rem;
+$size-small:   0.5rem;
+$size-medium:  1rem;
+$size-large:   1.5rem;
+$size-xlarge:  2rem;
+
+// --- Radii ---
+$radius-sm: 6px;
+$radius-md: 10px;
+$radius-lg: 14px;
+$radius-pill: 999px;
+$radius-round: 50%;
+$border-radius: $radius-md; // legacy alias
+
+// --- Motion ---
+$ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+$t-fast: 120ms;
+$t-base: 180ms;
+$t-slow: 280ms;
+
+// --- Elevation ---
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+$shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+$shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
+
+// --- Layout ---
+$header-height: 4rem;
+$sidebar-width: 260px;

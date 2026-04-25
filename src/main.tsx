@@ -173,7 +173,7 @@ const App = () => {
                         return {
                             ...prev,
                             currentPostIndex: currentIndex,
-                            likerMap: { ...lMap },
+                            likerMap: lMap,
                             percentage,
                         };
                     });

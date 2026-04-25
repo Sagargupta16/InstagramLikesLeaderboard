@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo, memo } from 'react';
 import { State } from '../model/state';
 import { SortField } from '../model/sort-field';
+import { LeaderboardEntry } from '../model/leaderboard-entry';
 import { TrophyIcon } from './icons/TrophyIcon';
 import {
     filterLeaderboard,
@@ -16,274 +17,305 @@ interface LeaderboardProps {
     setState: (state: State) => void;
 }
 
-export const Leaderboard = ({ state, setState }: LeaderboardProps) => {
-    if (state.status !== 'results') {
-        return null;
+interface RowProps {
+    entry: LeaderboardEntry;
+    barWidth: number;
+    onHide: (userId: string) => void;
+}
+
+const LeaderboardRow = memo(({ entry, barWidth, onHide }: RowProps) => {
+    let entryClass = 'leaderboard-entry';
+    let rankClass = 'entry-rank';
+    if (entry.rank === 1) {
+        entryClass += ' top-1';
+        rankClass += ' rank-1';
+    } else if (entry.rank === 2) {
+        entryClass += ' top-2';
+        rankClass += ' rank-2';
+    } else if (entry.rank === 3) {
+        entryClass += ' top-3';
+        rankClass += ' rank-3';
     }
 
-    const currentEntries = state.currentTab === 'following'
-        ? state.followingLeaderboard
-        : state.notFollowingLeaderboard;
+    return (
+        <div className={entryClass}>
+            <div className={rankClass}>
+                {entry.rank <= 3 ? <TrophyIcon rank={entry.rank} /> : `#${entry.rank}`}
+            </div>
+            <img
+                className='entry-avatar'
+                alt={entry.user.username}
+                src={entry.user.profile_pic_url}
+                loading='lazy'
+            />
+            <div className='entry-info'>
+                <a
+                    className='entry-username'
+                    target='_blank'
+                    href={`/${entry.user.username}`}
+                    rel='noreferrer'
+                >
+                    {entry.user.username}
+                    {entry.user.is_verified && <span className='verified-badge'>&#10004;</span>}
+                </a>
+                <span className='entry-fullname'>{entry.user.full_name}</span>
+            </div>
+            <div className='entry-likes-bar'>
+                <div className='likes-bar-fill' style={{ width: `${barWidth}%` }} />
+                <span className='likes-bar-text'>
+                    {entry.likesCount}/{entry.totalPosts}
+                </span>
+            </div>
+            <div className='entry-percentage'>{entry.percentage}%</div>
+            <button
+                type='button'
+                className='entry-hide-btn'
+                onClick={() => onHide(entry.user.id)}
+                title='Hide this user'
+                aria-label={`Hide ${entry.user.username}`}
+            >
+                &#10005;
+            </button>
+        </div>
+    );
+});
 
-    // Apply verified filter
-    let entries = currentEntries;
-    if (state.hideVerified) {
-        entries = entries.filter(e => !e.user.is_verified);
-    }
+// Narrow once at the top so hooks below see a concrete shape.
+type ResultsState = Extract<State, { status: 'results' }>;
 
-    // Apply hidden users filter
-    if (state.hiddenUsers.length > 0) {
-        const hiddenSet = new Set(state.hiddenUsers);
-        entries = entries.filter(e => !hiddenSet.has(e.user.id));
-    }
+const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: (s: State) => void }) => {
+    const {
+        currentTab,
+        followingLeaderboard,
+        notFollowingLeaderboard,
+        hideVerified,
+        hiddenUsers,
+        sortBy,
+        sortDirection,
+        searchTerm,
+        page,
+    } = state;
 
-    const sorted = sortLeaderboard(entries, state.sortBy, state.sortDirection);
-    const filtered = filterLeaderboard(sorted, state.searchTerm);
-    const pageEntries = getEntriesForPage(filtered, state.page);
-    const maxPage = getMaxPage(filtered.length);
-    const maxPercentage = filtered.length > 0 ? Math.max(...filtered.map(e => e.percentage)) : 100;
+    const visibleEntries = useMemo(() => {
+        const source = currentTab === 'following'
+            ? followingLeaderboard
+            : notFollowingLeaderboard;
 
-    const handleSortChange = (sortBy: SortField) => {
-        if (state.status !== 'results') {
-            return;
+        const hiddenSet = hiddenUsers.length > 0 ? new Set(hiddenUsers) : null;
+
+        if (!hideVerified && !hiddenSet) {
+            return source;
         }
-        setState({ ...state, sortBy, page: 1 });
+
+        return source.filter(e => {
+            if (hideVerified && e.user.is_verified) { return false; }
+            if (hiddenSet?.has(e.user.id)) { return false; }
+            return true;
+        });
+    }, [currentTab, followingLeaderboard, notFollowingLeaderboard, hideVerified, hiddenUsers]);
+
+    const sortedEntries = useMemo(
+        () => sortLeaderboard(visibleEntries, sortBy, sortDirection),
+        [visibleEntries, sortBy, sortDirection],
+    );
+
+    const filteredEntries = useMemo(
+        () => filterLeaderboard(sortedEntries, searchTerm),
+        [sortedEntries, searchTerm],
+    );
+
+    const { pageEntries, maxPage, maxPercentage } = useMemo(() => {
+        const pe = getEntriesForPage(filteredEntries, page);
+        const mp = getMaxPage(filteredEntries.length);
+        const maxPct = filteredEntries.length > 0
+            ? Math.max(...filteredEntries.map(e => e.percentage))
+            : 100;
+        return { pageEntries: pe, maxPage: mp, maxPercentage: maxPct };
+    }, [filteredEntries, page]);
+
+    const handleSortChange = (nextSort: SortField) => {
+        setState({ ...state, sortBy: nextSort, page: 1 });
     };
 
     const toggleSortDirection = () => {
-        if (state.status !== 'results') {
-            return;
-        }
         setState({
             ...state,
-            sortDirection: state.sortDirection === 'desc' ? 'asc' : 'desc',
+            sortDirection: sortDirection === 'desc' ? 'asc' : 'desc',
             page: 1,
         });
     };
 
     const hideUser = (userId: string) => {
-        if (state.status !== 'results') {
-            return;
-        }
-        setState({ ...state, hiddenUsers: [...state.hiddenUsers, userId] });
+        setState({ ...state, hiddenUsers: [...hiddenUsers, userId] });
+    };
+
+    const changePage = (delta: number) => {
+        const next = page + delta;
+        if (next < 1 || next > maxPage) { return; }
+        setState({ ...state, page: next });
+    };
+
+    const switchTab = (tab: 'following' | 'not_following') => {
+        if (currentTab === tab) { return; }
+        setState({ ...state, currentTab: tab, page: 1, searchTerm: '' });
     };
 
     return (
         <section className='flex'>
             <aside className='app-sidebar'>
-                {/* Stats */}
                 <div className='sidebar-stats'>
                     <p>Posts scanned: {state.totalPostsScanned}</p>
                     <p>Unique likers: {state.totalUniqueLikers}</p>
                     <p>Total likes: {state.totalLikes}</p>
-                    <p>Following who liked: {state.followingLeaderboard.length}</p>
-                    <p>Non-following who liked: {state.notFollowingLeaderboard.length}</p>
+                    <p>Following who liked: {followingLeaderboard.length}</p>
+                    <p>Non-following who liked: {notFollowingLeaderboard.length}</p>
                 </div>
 
-                {/* Filters */}
                 <div className='filter-controls'>
                     <p>Filters</p>
-                    <label className='badge m-small filter-toggle'>
+                    <label className='badge filter-toggle'>
                         <input
                             type='checkbox'
-                            checked={state.hideVerified}
-                            onChange={() => {
-                                if (state.status === 'results') {
-                                    setState({ ...state, hideVerified: !state.hideVerified, page: 1 });
-                                }
-                            }}
+                            checked={hideVerified}
+                            onChange={() => setState({ ...state, hideVerified: !hideVerified, page: 1 })}
                         />
-                        &nbsp;Hide verified accounts
+                        <span>Hide verified accounts</span>
                     </label>
-                    {state.hiddenUsers.length > 0 && (
+                    {hiddenUsers.length > 0 && (
                         <button
+                            type='button'
                             className='sort-direction-btn'
-                            onClick={() => {
-                                if (state.status === 'results') {
-                                    setState({ ...state, hiddenUsers: [], page: 1 });
-                                }
-                            }}
+                            onClick={() => setState({ ...state, hiddenUsers: [], page: 1 })}
                         >
-                            Unhide all ({state.hiddenUsers.length})
+                            Unhide all ({hiddenUsers.length})
                         </button>
                     )}
                 </div>
 
-                {/* Sort controls */}
                 <div className='sort-controls'>
                     <p>Sort by</p>
                     <menu className='flex column m-clear p-clear'>
-                        <label className='badge m-small'>
+                        <label className='badge'>
                             <input
                                 type='radio'
                                 name='sortBy'
-                                checked={state.sortBy === 'likes'}
+                                checked={sortBy === 'likes'}
                                 onChange={() => handleSortChange('likes')}
                             />
-                            &nbsp;Like count
+                            <span>Like count</span>
                         </label>
-                        <label className='badge m-small'>
+                        <label className='badge'>
                             <input
                                 type='radio'
                                 name='sortBy'
-                                checked={state.sortBy === 'percentage'}
+                                checked={sortBy === 'percentage'}
                                 onChange={() => handleSortChange('percentage')}
                             />
-                            &nbsp;Percentage
+                            <span>Percentage</span>
                         </label>
-                        <label className='badge m-small'>
+                        <label className='badge'>
                             <input
                                 type='radio'
                                 name='sortBy'
-                                checked={state.sortBy === 'username'}
+                                checked={sortBy === 'username'}
                                 onChange={() => handleSortChange('username')}
                             />
-                            &nbsp;Username
+                            <span>Username</span>
                         </label>
                     </menu>
-                    <button className='sort-direction-btn' onClick={toggleSortDirection}>
-                        {state.sortDirection === 'desc' ? 'Descending' : 'Ascending'}
+                    <button type='button' className='sort-direction-btn' onClick={toggleSortDirection}>
+                        {sortDirection === 'desc' ? 'Descending' : 'Ascending'}
                     </button>
                 </div>
 
-                {/* Pagination */}
                 <div className='sidebar-pagination'>
                     <p>Pages</p>
                     <div className='pagination-controls'>
-                        <a
-                            onClick={() => {
-                                if (state.status === 'results' && state.page > 1) {
-                                    setState({ ...state, page: state.page - 1 });
-                                }
-                            }}
+                        <button
+                            type='button'
+                            className='pagination-btn'
+                            onClick={() => changePage(-1)}
+                            disabled={page <= 1}
+                            aria-label='Previous page'
                         >
                             &#10094;
-                        </a>
-                        <span>{state.page}&nbsp;/&nbsp;{maxPage}</span>
-                        <a
-                            onClick={() => {
-                                if (state.status === 'results' && state.page < maxPage) {
-                                    setState({ ...state, page: state.page + 1 });
-                                }
-                            }}
+                        </button>
+                        <span>{page}&nbsp;/&nbsp;{maxPage}</span>
+                        <button
+                            type='button'
+                            className='pagination-btn'
+                            onClick={() => changePage(1)}
+                            disabled={page >= maxPage}
+                            aria-label='Next page'
                         >
                             &#10095;
-                        </a>
+                        </button>
                     </div>
                 </div>
 
-                {/* Export */}
                 <button
+                    type='button'
                     className='export-btn'
-                    disabled={filtered.length === 0}
-                    onClick={() => exportAsCsv(filtered, `likes-leaderboard-${state.currentTab}.csv`)}
+                    disabled={filteredEntries.length === 0}
+                    onClick={() => exportAsCsv(filteredEntries, `likes-leaderboard-${currentTab}.csv`)}
                 >
                     Export CSV
                 </button>
                 <button
+                    type='button'
                     className='export-btn'
-                    disabled={filtered.length === 0}
-                    onClick={() => exportAsJson(filtered, `likes-leaderboard-${state.currentTab}.json`)}
+                    disabled={filteredEntries.length === 0}
+                    onClick={() => exportAsJson(filteredEntries, `likes-leaderboard-${currentTab}.json`)}
                 >
                     Export JSON
                 </button>
             </aside>
 
             <article className='results-container'>
-                {/* Tabs */}
                 <nav className='tabs-container'>
-                    <div
-                        className={`tab ${state.currentTab === 'following' ? 'tab-active' : ''}`}
-                        onClick={() => {
-                            if (state.status === 'results' && state.currentTab !== 'following') {
-                                setState({ ...state, currentTab: 'following', page: 1, searchTerm: '' });
-                            }
-                        }}
+                    <button
+                        type='button'
+                        className={`tab ${currentTab === 'following' ? 'tab-active' : ''}`}
+                        onClick={() => switchTab('following')}
                     >
-                        Following ({state.followingLeaderboard.length})
-                    </div>
-                    <div
-                        className={`tab ${state.currentTab === 'not_following' ? 'tab-active' : ''}`}
-                        onClick={() => {
-                            if (state.status === 'results' && state.currentTab !== 'not_following') {
-                                setState({ ...state, currentTab: 'not_following', page: 1, searchTerm: '' });
-                            }
-                        }}
+                        Following ({followingLeaderboard.length})
+                    </button>
+                    <button
+                        type='button'
+                        className={`tab ${currentTab === 'not_following' ? 'tab-active' : ''}`}
+                        onClick={() => switchTab('not_following')}
                     >
-                        Not Following ({state.notFollowingLeaderboard.length})
-                    </div>
+                        Not Following ({notFollowingLeaderboard.length})
+                    </button>
                 </nav>
 
-                {/* Leaderboard entries */}
                 {pageEntries.length === 0 && (
-                    <div className='p-large t-center' style={{ color: '#888' }}>
-                        {state.searchTerm ? 'No results match your search.' : 'No likers found in this category.'}
+                    <div className='empty-state'>
+                        {searchTerm ? 'No results match your search.' : 'No likers found in this category.'}
                     </div>
                 )}
+
                 {pageEntries.map(entry => {
                     const barWidth = maxPercentage > 0
                         ? (entry.percentage / maxPercentage) * 100
                         : 0;
-
-                    let entryClass = 'leaderboard-entry';
-                    let rankClass = 'entry-rank';
-                    if (entry.rank === 1) {
-                        entryClass += ' top-1';
-                        rankClass += ' rank-1';
-                    } else if (entry.rank === 2) {
-                        entryClass += ' top-2';
-                        rankClass += ' rank-2';
-                    } else if (entry.rank === 3) {
-                        entryClass += ' top-3';
-                        rankClass += ' rank-3';
-                    }
-
                     return (
-                        <div className={entryClass} key={entry.user.id}>
-                            <div className={rankClass}>
-                                {entry.rank <= 3
-                                    ? <TrophyIcon rank={entry.rank} />
-                                    : `#${entry.rank}`
-                                }
-                            </div>
-                            <img
-                                className='entry-avatar'
-                                alt={entry.user.username}
-                                src={entry.user.profile_pic_url}
-                            />
-                            <div className='entry-info'>
-                                <a
-                                    className='entry-username'
-                                    target='_blank'
-                                    href={`/${entry.user.username}`}
-                                    rel='noreferrer'
-                                >
-                                    {entry.user.username}
-                                    {entry.user.is_verified && <span className='verified-badge'>&#10004;</span>}
-                                </a>
-                                <span className='entry-fullname'>{entry.user.full_name}</span>
-                            </div>
-                            <div className='entry-likes-bar'>
-                                <div
-                                    className='likes-bar-fill'
-                                    style={{ width: `${barWidth}%` }}
-                                />
-                                <span className='likes-bar-text'>
-                                    {entry.likesCount}/{entry.totalPosts}
-                                </span>
-                            </div>
-                            <div className='entry-percentage'>{entry.percentage}%</div>
-                            <button
-                                className='entry-hide-btn'
-                                onClick={() => hideUser(entry.user.id)}
-                                title='Hide this user'
-                            >
-                                &#10005;
-                            </button>
-                        </div>
+                        <LeaderboardRow
+                            key={entry.user.id}
+                            entry={entry}
+                            barWidth={barWidth}
+                            onHide={hideUser}
+                        />
                     );
                 })}
             </article>
         </section>
     );
+};
+
+export const Leaderboard = ({ state, setState }: LeaderboardProps) => {
+    if (state.status !== 'results') {
+        return null;
+    }
+    return <LeaderboardInner state={state} setState={setState} />;
 };

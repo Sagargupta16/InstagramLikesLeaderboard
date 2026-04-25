@@ -24,13 +24,14 @@ export const ResultsNav = ({ currentView, scanModes, onViewChange }: ResultsNavP
     return (
         <nav className='results-nav'>
             {enabledViews.map(v => (
-                <div
+                <button
+                    type='button'
                     key={v.key}
                     className={`results-nav-item ${currentView === v.key ? 'results-nav-active' : ''}`}
                     onClick={() => onViewChange(v.key)}
                 >
                     {v.label}
-                </div>
+                </button>
             ))}
         </nav>
     );
