@@ -1,24 +1,40 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
-  "schedule": [
-    "on the first day of the month"
-  ],
-  "groupName": "all-dependencies",
-  "groupSlug": "all",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "timezone": "Asia/Kolkata",
+  "schedule": ["before 3am on monday"],
+  "prHourlyLimit": 2,
+  "prConcurrentLimit": 3,
+  "rangeStrategy": "replace",
   "packageRules": [
     {
-      "groupName": "all-dependencies",
-      "groupSlug": "all",
-      "matchPackageNames": [
-        "*"
-      ]
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "groupName": "non-major weekly",
+      "labels": ["dependencies", "auto-merge"]
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "groupName": "major updates",
+      "labels": ["dependencies", "major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "matchDatasources": ["docker"],
+      "groupName": "docker",
+      "schedule": ["before 3am on monday"]
+    },
+    {
+      "matchCategories": ["lock-file-maintenance"],
+      "schedule": ["before 3am on monday"],
+      "automerge": true
     }
   ],
-  "prCreation": "not-pending",
-  "prHourlyLimit": 1,
-  "prConcurrentLimit": 1,
-  "automerge": false
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "schedule": ["at any time"]
+  }
 }
