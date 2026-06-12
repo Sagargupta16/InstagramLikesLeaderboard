@@ -1,2 +1,6 @@
 * text=auto eol=lf
 # v1
+
+# Landing page (inline-styled static HTML) -- not the app source.
+# Keep Linguist stats reflecting the Preact/TypeScript tool itself.
+public/index.html linguist-documentation
