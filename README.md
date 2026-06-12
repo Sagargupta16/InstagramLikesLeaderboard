@@ -1,13 +1,11 @@
 # Instagram Likes Leaderboard
 
-![GitHub stars](https://img.shields.io/github/stars/Sagargupta16/InstagramLikesLeaderboard?style=flat-square)
-![GitHub forks](https://img.shields.io/github/forks/Sagargupta16/InstagramLikesLeaderboard?style=flat-square)
-![License](https://img.shields.io/github/license/Sagargupta16/InstagramLikesLeaderboard?style=flat-square)
-![Last Commit](https://img.shields.io/github/last-commit/Sagargupta16/InstagramLikesLeaderboard?style=flat-square)
+![GitHub stars](https://img.shields.io/github/stars/Sagargupta16/InstagramLikesLeaderboard?style=flat-square&cacheSeconds=86400)
+![GitHub forks](https://img.shields.io/github/forks/Sagargupta16/InstagramLikesLeaderboard?style=flat-square&cacheSeconds=86400)
+![Last Commit](https://img.shields.io/github/last-commit/Sagargupta16/InstagramLikesLeaderboard?style=flat-square&cacheSeconds=86400)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GitHub Pages](https://img.shields.io/badge/demo-live-00ffff?logo=github)](https://sagargupta.online/InstagramLikesLeaderboard/)
-[![GitHub stars](https://img.shields.io/github/stars/Sagargupta16/InstagramLikesLeaderboard?style=social)](https://github.com/Sagargupta16/InstagramLikesLeaderboard)
 
 Find out who likes your Instagram posts the most!
 
@@ -168,13 +166,13 @@ A: Yes. Results are stored in your browser's localStorage. Clearing site data fo
 ## For Developers
 
 - **Tech stack:** Preact + TypeScript + Webpack 5 + SCSS
-- **Node version:** 16.14.0 (use `nvm use` if you have nvm)
+- **Node version:** 24 (use `nvm use` if you have nvm)
 - **Install:** `npm install`
 - **Dev build:** `npm run build-dev`
 - **Production build:** `npm run build`
 - **API:** Uses Instagram's v1 REST API (`/api/v1/feed/user/`, `/api/v1/media/{id}/likers/`, `/api/v1/friendships/{id}/following/`, `/api/v1/friendships/{id}/followers/`)
 - **Output:** Single minified JS bundle (~98KB) embedded in `public/index.html`
-- **Deployment:** Auto-deploys to GitHub Pages on push to `master`
+- **Deployment:** Auto-deploys to GitHub Pages on push to `main`
 
 ---
 
