@@ -34,5 +34,9 @@
   },
   "dependencies": {
     "preact": "^10.25.4"
+  },
+  "overrides": {
+    "qs": "^6.15.2",
+    "uuid": "^11.1.1"
   }
 }
