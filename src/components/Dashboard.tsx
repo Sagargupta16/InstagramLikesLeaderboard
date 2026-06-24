@@ -1,6 +1,7 @@
 import React from 'react';
 import { State } from '../model/state';
 import { TrophyIcon } from './icons/TrophyIcon';
+import { CAPTION_PREVIEW_LENGTH } from '../constants/constants';
 
 interface DashboardProps {
     state: State;
@@ -25,6 +26,7 @@ export const Dashboard = ({ state }: DashboardProps) => {
 
     const followerCount = followerIds.length;
     const followingCount = followingIds.length;
+    const captionText = mostLikedPost?.edge_media_to_caption.edges[0]?.node.text;
     const engagementRate = followerCount > 0 && totalPostsScanned > 0
         ? ((totalLikes / totalPostsScanned / followerCount) * 100).toFixed(2)
         : null;
@@ -90,10 +92,10 @@ export const Dashboard = ({ state }: DashboardProps) => {
                             <span className='most-liked-likes'>
                                 {mostLikedPost.edge_media_preview_like.count.toLocaleString()} likes
                             </span>
-                            {mostLikedPost.edge_media_to_caption.edges.length > 0 && (
+                            {captionText !== undefined && (
                                 <p className='most-liked-caption'>
-                                    {mostLikedPost.edge_media_to_caption.edges[0].node.text.substring(0, 150)}
-                                    {mostLikedPost.edge_media_to_caption.edges[0].node.text.length > 150 ? '...' : ''}
+                                    {captionText.substring(0, CAPTION_PREVIEW_LENGTH)}
+                                    {captionText.length > CAPTION_PREVIEW_LENGTH ? '...' : ''}
                                 </p>
                             )}
                         </div>

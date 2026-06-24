@@ -3,7 +3,7 @@ import { render } from 'react-dom';
 import './styles/styles.scss';
 
 import { State } from './model/state';
-import { Timings } from './model/timings';
+import { LikerUserNode } from './model/user';
 import { ScanModes } from './model/scan-modes';
 import { ResultsView } from './model/results-view';
 import {
@@ -36,9 +36,43 @@ interface ToastState {
     style?: 'success' | 'error' | 'warning' | 'info';
 }
 
+type ResultsState = Extract<State, { status: 'results' }>;
+
+// Build the full results-view state from a completed or previously-saved scan.
+// The scan data comes from `saved`; the UI fields (tabs, search, paging, filters)
+// always start at their defaults.
+const buildResultsState = (saved: SavedScan): ResultsState => ({
+    status: 'results',
+    currentView: saved.scanModes.dashboard ? 'dashboard' : 'leaderboard',
+    scanModes: saved.scanModes,
+    currentTab: 'following',
+    searchTerm: '',
+    sortBy: 'likes',
+    sortDirection: 'desc',
+    page: 1,
+    followingLeaderboard: saved.followingLeaderboard,
+    notFollowingLeaderboard: saved.notFollowingLeaderboard,
+    totalPostsScanned: saved.totalPostsScanned,
+    totalUniqueLikers: saved.totalUniqueLikers,
+    totalLikes: saved.totalLikes,
+    followerIds: saved.followerIds,
+    followingIds: saved.followingIds,
+    followerUsers: saved.followerUsers,
+    followingUsers: saved.followingUsers,
+    likerMap: saved.likerMap,
+    mostLikedPost: saved.mostLikedPost,
+    averageLikesPerPost: saved.averageLikesPerPost,
+    posts: saved.posts,
+    hideVerified: false,
+    hiddenUsers: [],
+    followerTab: 'dont_follow_back',
+    followerSearchTerm: '',
+    followerPage: 1,
+});
+
 const App = () => {
     const [state, setState] = useState<State>({ status: 'initial' });
-    const [timings, setTimings] = useState<Timings>({
+    const [timings, setTimings] = useState({
         timeBetweenPostFetches: DEFAULT_TIME_BETWEEN_POST_FETCHES,
         timeToWaitAfterSixPostFetches: DEFAULT_TIME_TO_WAIT_AFTER_SIX_POST_FETCHES,
         timeBetweenLikerFetches: DEFAULT_TIME_BETWEEN_LIKER_FETCHES,
@@ -87,36 +121,7 @@ const App = () => {
             return;
         }
 
-        const defaultView: ResultsView = saved.scanModes.dashboard ? 'dashboard' : 'leaderboard';
-
-        setState({
-            status: 'results',
-            currentView: defaultView,
-            scanModes: saved.scanModes,
-            currentTab: 'following',
-            searchTerm: '',
-            sortBy: 'likes',
-            sortDirection: 'desc',
-            page: 1,
-            followingLeaderboard: saved.followingLeaderboard,
-            notFollowingLeaderboard: saved.notFollowingLeaderboard,
-            totalPostsScanned: saved.totalPostsScanned,
-            totalUniqueLikers: saved.totalUniqueLikers,
-            totalLikes: saved.totalLikes,
-            followerIds: saved.followerIds,
-            followingIds: saved.followingIds,
-            followerUsers: saved.followerUsers,
-            followingUsers: saved.followingUsers,
-            likerMap: saved.likerMap,
-            mostLikedPost: saved.mostLikedPost,
-            averageLikesPerPost: saved.averageLikesPerPost,
-            posts: saved.posts,
-            hideVerified: false,
-            hiddenUsers: [],
-            followerTab: 'dont_follow_back',
-            followerSearchTerm: '',
-            followerPage: 1,
-        });
+        setState(buildResultsState(saved));
 
         setToast({ show: true, text: 'Previous results loaded!', style: 'success' });
     };
@@ -201,7 +206,7 @@ const App = () => {
 
             // Phase 4: Fetch followers (if enabled)
             let followerIdsArray: string[] = [];
-            let followerUsersRecord: Record<string, any> = {};
+            let followerUsersRecord: Record<string, LikerUserNode> = {};
 
             if (scanModes.followerAnalysis) {
                 setState(prev => {
@@ -230,16 +235,16 @@ const App = () => {
             const notFollowingLeaderboard = buildLeaderboard(likerMap, followingResult.ids, posts.length, false);
 
             const totalLikes = Object.values(likerMap).reduce((sum, a) => sum + a.likesCount, 0);
-            const mostLikedPost = posts.length > 0
-                ? [...posts].sort((a, b) => b.edge_media_preview_like.count - a.edge_media_preview_like.count)[0]
-                : null;
+            const sortedByLikes = [...posts].sort(
+                (a, b) => b.edge_media_preview_like.count - a.edge_media_preview_like.count,
+            );
+            const mostLikedPost = sortedByLikes[0] ?? null;
             const averageLikesPerPost = posts.length > 0 ? totalLikes / posts.length : 0;
-
-            const defaultView: ResultsView = scanModes.dashboard ? 'dashboard' : 'leaderboard';
 
             const followingIdsArray = Array.from(followingResult.ids);
 
-            // Save to localStorage
+            // Save to localStorage, then derive the displayed state from the exact
+            // same data so the saved and shown views can never drift apart.
             const savedData: SavedScan = {
                 timestamp: Date.now(),
                 scanModes,
@@ -260,34 +265,7 @@ const App = () => {
             saveScanResults(savedData);
             setSavedScan(savedData);
 
-            setState({
-                status: 'results',
-                currentView: defaultView,
-                scanModes,
-                currentTab: 'following',
-                searchTerm: '',
-                sortBy: 'likes',
-                sortDirection: 'desc',
-                page: 1,
-                followingLeaderboard,
-                notFollowingLeaderboard,
-                totalPostsScanned: posts.length,
-                totalUniqueLikers: Object.keys(likerMap).length,
-                totalLikes,
-                followerIds: followerIdsArray,
-                followingIds: followingIdsArray,
-                followerUsers: followerUsersRecord,
-                followingUsers: followingResult.users,
-                likerMap,
-                mostLikedPost,
-                averageLikesPerPost,
-                posts,
-                hideVerified: false,
-                hiddenUsers: [],
-                followerTab: 'dont_follow_back',
-                followerSearchTerm: '',
-                followerPage: 1,
-            });
+            setState(buildResultsState(savedData));
 
             setToast({ show: true, text: 'Scan complete! Results ready.', style: 'success' });
         };

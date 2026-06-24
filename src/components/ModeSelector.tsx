@@ -9,7 +9,7 @@ interface ModeSelectorProps {
 }
 
 export const ModeSelector = ({ onScan, onLoadPrevious, savedScan }: ModeSelectorProps) => {
-    const [modes, setModes] = useState<ScanModes>(DEFAULT_SCAN_MODES);
+    const [modes, setModes] = useState(DEFAULT_SCAN_MODES);
 
     return (
         <div className='mode-selector'>
