@@ -4,6 +4,7 @@ dist/
 .idea/
 .DS_Store
 bun.lockb
+.claude/
 .superpowers/
 docs/superpowers/
 

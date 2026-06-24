@@ -32,7 +32,7 @@ Webpack compiles `src/main.tsx` into `dist/dist.js` (single minified bundle). Th
 
 ## Architecture
 
-**Single-page Preact app** using React compatibility aliases (webpack + tsconfig both alias `react` to `preact/compat`). Written in TypeScript with SCSS styles. Target is ES5 (tsconfig) - avoid Set/Map spread operators, use `Array.from()` instead.
+**Single-page Preact app** using React compatibility aliases (webpack + tsconfig both alias `react` to `preact/compat`). Written in TypeScript with SCSS styles. Target is ES2020 (tsconfig).
 
 ### State Machine
 
