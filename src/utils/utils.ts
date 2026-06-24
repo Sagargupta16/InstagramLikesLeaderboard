@@ -171,19 +171,20 @@ export function buildLikerMap(
 ): Record<string, LikerAccumulator> {
     const map = { ...existingMap };
     for (const liker of likers) {
-        if (map[liker.id]) {
-            map[liker.id] = {
-                user: liker,
-                likesCount: map[liker.id].likesCount + 1,
-            };
-        } else {
-            map[liker.id] = {
-                user: liker,
-                likesCount: 1,
-            };
-        }
+        const existing = map[liker.id];
+        map[liker.id] = {
+            user: liker,
+            likesCount: existing ? existing.likesCount + 1 : 1,
+        };
     }
     return map;
+}
+
+// Assigns 1-based ranks to entries in their current order, in place.
+function assignRanks(entries: LeaderboardEntry[]): void {
+    entries.forEach((entry, index) => {
+        (entry as { rank: number }).rank = index + 1;
+    });
 }
 
 export function buildLeaderboard(
@@ -196,8 +197,7 @@ export function buildLeaderboard(
     const entries: LeaderboardEntry[] = [];
     const addedIds = new Set<string>();
 
-    for (const id of Object.keys(likerMap)) {
-        const accumulator = likerMap[id];
+    for (const [id, accumulator] of Object.entries(likerMap)) {
         const userIsFollowed = followingIds.has(id);
 
         if (isFollowing !== userIsFollowed) {
@@ -216,10 +216,10 @@ export function buildLeaderboard(
 
     // For the "following" tab, include users who never liked any post (0 likes)
     if (isFollowing && followingUsersData) {
-        for (const id of Object.keys(followingUsersData)) {
+        for (const [id, user] of Object.entries(followingUsersData)) {
             if (!addedIds.has(id)) {
                 entries.push({
-                    user: followingUsersData[id],
+                    user,
                     likesCount: 0,
                     totalPosts,
                     percentage: 0,
@@ -231,9 +231,7 @@ export function buildLeaderboard(
 
     // Default sort: by likesCount descending
     entries.sort((a, b) => b.likesCount - a.likesCount);
-    for (let i = 0; i < entries.length; i++) {
-        (entries[i] as { rank: number }).rank = i + 1;
-    }
+    assignRanks(entries);
 
     return entries;
 }
@@ -264,9 +262,7 @@ export function sortLeaderboard(
         return direction === 'desc' ? -comparison : comparison;
     });
 
-    for (let i = 0; i < sorted.length; i++) {
-        (sorted[i] as { rank: number }).rank = i + 1;
-    }
+    assignRanks(sorted);
 
     return sorted;
 }
@@ -301,13 +297,8 @@ export function getEntriesForPage(
 
 // --- Export ---
 
-export function exportAsCsv(entries: readonly LeaderboardEntry[], filename: string): void {
-    const header = 'Rank,Username,Full Name,Likes,Total Posts,Percentage\n';
-    const rows = entries.map(e =>
-        `${e.rank},"${e.user.username}","${e.user.full_name}",${e.likesCount},${e.totalPosts},${e.percentage}%`,
-    ).join('\n');
-
-    const blob = new Blob([header + rows], { type: 'text/csv' });
+function downloadBlob(content: string, mimeType: string, filename: string): void {
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -318,14 +309,15 @@ export function exportAsCsv(entries: readonly LeaderboardEntry[], filename: stri
     URL.revokeObjectURL(url);
 }
 
+export function exportAsCsv(entries: readonly LeaderboardEntry[], filename: string): void {
+    const header = 'Rank,Username,Full Name,Likes,Total Posts,Percentage\n';
+    const rows = entries.map(e =>
+        `${e.rank},"${e.user.username}","${e.user.full_name}",${e.likesCount},${e.totalPosts},${e.percentage}%`,
+    ).join('\n');
+
+    downloadBlob(header + rows, 'text/csv', filename);
+}
+
 export function exportAsJson(entries: readonly LeaderboardEntry[], filename: string): void {
-    const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadBlob(JSON.stringify(entries, null, 2), 'application/json', filename);
 }

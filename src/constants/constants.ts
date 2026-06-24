@@ -8,6 +8,12 @@ export const IG_APP_ID = '936619743392459';
 // Posts per page (Instagram allows up to ~50, 33 balances speed vs safety)
 export const POSTS_PER_PAGE = 33;
 
+// How many fetches in a phase before injecting a longer "cool-off" sleep.
+// These pair with the DEFAULT_TIME_TO_WAIT_AFTER_* timing constants below.
+export const POST_FETCHES_BEFORE_SLEEP = 6;
+export const LIKER_FETCHES_BEFORE_SLEEP = 5;
+export const USER_LIST_FETCHES_BEFORE_SLEEP = 6;
+
 // Timing defaults (ms)
 export const DEFAULT_TIME_BETWEEN_POST_FETCHES = 1000;
 export const DEFAULT_TIME_TO_WAIT_AFTER_SIX_POST_FETCHES = 10000;
@@ -25,3 +31,6 @@ export const GLOBAL_COOLDOWN_MS = 30000;       // 30s global cooldown
 export const PHASE_WARMUP_MS = 2500;           // delay before first request of each phase
 
 export const LOCAL_STORAGE_KEY = 'ill_scan_results';
+
+// Max characters of a post caption shown in the dashboard before truncating.
+export const CAPTION_PREVIEW_LENGTH = 150;

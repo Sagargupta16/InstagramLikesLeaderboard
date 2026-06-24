@@ -1,7 +1,12 @@
 import { PostNode } from '../model/post';
 import { LikerAccumulator, LikerUserNode } from '../model/user';
 import { Timings } from '../model/timings';
-import { PHASE_WARMUP_MS } from '../constants/constants';
+import {
+    PHASE_WARMUP_MS,
+    POST_FETCHES_BEFORE_SLEEP,
+    LIKER_FETCHES_BEFORE_SLEEP,
+    USER_LIST_FETCHES_BEFORE_SLEEP,
+} from '../constants/constants';
 import {
     sleep,
     randomizedSleep,
@@ -77,7 +82,7 @@ export async function fetchAllPosts(
 
         await sleep(randomizedSleep(timings.timeBetweenPostFetches));
         postCycle++;
-        if (postCycle > 6) {
+        if (postCycle > POST_FETCHES_BEFORE_SLEEP) {
             postCycle = 0;
             onToast({ show: true, text: `Sleeping ${timings.timeToWaitAfterSixPostFetches / 1000}s to avoid rate limit...` });
             await sleep(timings.timeToWaitAfterSixPostFetches);
@@ -104,8 +109,7 @@ export async function fetchAllLikers(
     await sleep(PHASE_WARMUP_MS);
     onToast({ show: false, text: '' });
 
-    for (let i = 0; i < posts.length; i++) {
-        const post = posts[i];
+    for (const [i, post] of posts.entries()) {
         const likerUrl = postLikersUrlGenerator(String(post.id));
         let likerData: any;
 
@@ -135,7 +139,7 @@ export async function fetchAllLikers(
         }
 
         await sleep(randomizedSleep(timings.timeBetweenLikerFetches));
-        if ((i + 1) % 5 === 0 && i < posts.length - 1) {
+        if ((i + 1) % LIKER_FETCHES_BEFORE_SLEEP === 0 && i < posts.length - 1) {
             onToast({ show: true, text: `Sleeping ${timings.timeToWaitAfterFiveLikerFetches / 1000}s to avoid rate limit...` });
             await sleep(timings.timeToWaitAfterFiveLikerFetches);
             onToast({ show: false, text: '' });
@@ -208,7 +212,7 @@ async function fetchUserList(
 
         await sleep(randomizedSleep(timings.timeBetween));
         cycle++;
-        if (cycle > 6) {
+        if (cycle > USER_LIST_FETCHES_BEFORE_SLEEP) {
             cycle = 0;
             onToast({ show: true, text: `Sleeping ${timings.timeAfterSix / 1000}s to avoid rate limit...` });
             await sleep(timings.timeAfterSix);

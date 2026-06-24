@@ -3,6 +3,7 @@ import { State } from '../model/state';
 import { FollowerTab } from '../model/follower-tab';
 import { LikerUserNode } from '../model/user';
 import { LEADERBOARD_ENTRIES_PER_PAGE } from '../constants/constants';
+import { getMaxPage } from '../utils/utils';
 
 interface FollowerAnalysisProps {
     state: State;
@@ -50,7 +51,7 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
     const allUsers = useMemo<LikerUserNode[]>(
         () => currentIds
             .map(id => followerUsers[id] || followingUsers[id])
-            .filter(Boolean),
+            .filter((user): user is LikerUserNode => user !== undefined),
         [currentIds, followerUsers, followingUsers],
     );
 
@@ -63,7 +64,7 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
         );
     }, [allUsers, followerSearchTerm]);
 
-    const totalPages = Math.max(1, Math.ceil(filteredUsers.length / LEADERBOARD_ENTRIES_PER_PAGE));
+    const totalPages = getMaxPage(filteredUsers.length);
 
     const pageUsers = useMemo(
         () => filteredUsers.slice(
