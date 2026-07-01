@@ -309,10 +309,16 @@ function downloadBlob(content: string, mimeType: string, filename: string): void
     URL.revokeObjectURL(url);
 }
 
+// RFC 4180: wrap in quotes and double any embedded quote so commas, quotes,
+// and newlines in free-form fields (e.g. full_name) don't break the CSV.
+function csvQuote(value: string): string {
+    return `"${value.replace(/"/g, '""')}"`;
+}
+
 export function exportAsCsv(entries: readonly LeaderboardEntry[], filename: string): void {
     const header = 'Rank,Username,Full Name,Likes,Total Posts,Percentage\n';
     const rows = entries.map(e =>
-        `${e.rank},"${e.user.username}","${e.user.full_name}",${e.likesCount},${e.totalPosts},${e.percentage}%`,
+        `${e.rank},${csvQuote(e.user.username)},${csvQuote(e.user.full_name)},${e.likesCount},${e.totalPosts},${e.percentage}%`,
     ).join('\n');
 
     downloadBlob(header + rows, 'text/csv', filename);
