@@ -309,10 +309,21 @@ function downloadBlob(content: string, mimeType: string, filename: string): void
     URL.revokeObjectURL(url);
 }
 
+// RFC 4180: wrap in quotes and double any embedded quote so commas, quotes,
+// and newlines in free-form fields (e.g. full_name) don't break the CSV.
+// Also neutralize CSV/formula injection: usernames and full names come from
+// Instagram (attacker-controllable), so a value like "=cmd|'/c calc'!A1" would
+// execute when the exported file is opened in Excel/Sheets. Prefix a single
+// quote to any field starting with a formula trigger so it's treated as text.
+function csvQuote(value: string): string {
+    const escaped = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+    return `"${escaped.replace(/"/g, '""')}"`;
+}
+
 export function exportAsCsv(entries: readonly LeaderboardEntry[], filename: string): void {
     const header = 'Rank,Username,Full Name,Likes,Total Posts,Percentage\n';
     const rows = entries.map(e =>
-        `${e.rank},"${e.user.username}","${e.user.full_name}",${e.likesCount},${e.totalPosts},${e.percentage}%`,
+        `${e.rank},${csvQuote(e.user.username)},${csvQuote(e.user.full_name)},${e.likesCount},${e.totalPosts},${e.percentage}%`,
     ).join('\n');
 
     downloadBlob(header + rows, 'text/csv', filename);

@@ -82,7 +82,7 @@ export async function fetchAllPosts(
 
         await sleep(randomizedSleep(timings.timeBetweenPostFetches));
         postCycle++;
-        if (postCycle > POST_FETCHES_BEFORE_SLEEP) {
+        if (postCycle >= POST_FETCHES_BEFORE_SLEEP) {
             postCycle = 0;
             onToast({ show: true, text: `Sleeping ${timings.timeToWaitAfterSixPostFetches / 1000}s to avoid rate limit...` });
             await sleep(timings.timeToWaitAfterSixPostFetches);
@@ -212,7 +212,7 @@ async function fetchUserList(
 
         await sleep(randomizedSleep(timings.timeBetween));
         cycle++;
-        if (cycle > USER_LIST_FETCHES_BEFORE_SLEEP) {
+        if (cycle >= USER_LIST_FETCHES_BEFORE_SLEEP) {
             cycle = 0;
             onToast({ show: true, text: `Sleeping ${timings.timeAfterSix / 1000}s to avoid rate limit...` });
             await sleep(timings.timeAfterSix);
