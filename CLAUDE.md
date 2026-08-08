@@ -9,7 +9,7 @@
 
 ## What This Is
 
-Instagram Likes Leaderboard 2.2.0 is a browser-console Preact application. Users copy one generated bundle into the console on `www.instagram.com`; it replaces the page with a local UI and calls Instagram's private v1 web endpoints using the existing browser session. There is no backend.
+Instagram Likes Leaderboard 2.2.1 is a browser-console Preact application. Users copy one generated bundle into the console on `www.instagram.com`; it replaces the page with a local UI and calls Instagram's private v1 web endpoints using the existing browser session. There is no backend.
 
 Preserve the Preact/TypeScript/Webpack/SCSS architecture, npm/package-lock, ES2020 target, and single embedded production bundle. Do not add live Instagram calls to tests or CI.
 
@@ -31,7 +31,7 @@ Use Node 24 from `.nvmrc`.
 
 ## Request Contract
 
-`createIgRequester()` in `src/utils/utils.ts` owns all Instagram traffic for one run. Requests must stay sequential. Fixed policy in `src/constants/constants.ts` enforces 2–3 second gaps, 20-second request timeout, one transient retry, 250 requests, 15 minutes, 150 posts, 6 post pages, and 40 pages per user list.
+`createIgRequester()` in `src/utils/utils.ts` owns all Instagram traffic for one run. Requests must stay sequential. Fixed policy in `src/constants/constants.ts` enforces 2–3 second gaps, a 20-second request timeout, one transient retry, 250 requests, 15 minutes, and 150 posts. Post and relationship pagination follows validated continuation cursors to the endpoint's terminal response within those global bounds.
 
 Never retry auth, challenge/checkpoint, rate-limit/feedback, timeout, Stop, bounds, or invalid-response errors. Only network errors and HTTP 408/500/502/503/504 receive one retry. Keep the pause gate immediately before every fetch/retry. Stop must abort delays and in-flight fetches.
 
@@ -39,11 +39,11 @@ No implementation can guarantee avoiding Instagram throttling or account enforce
 
 ## Scan and Data Contract
 
-`src/utils/scanner.ts` performs posts, likers, following, and optional followers in order. Every required request must succeed; do not catch errors to continue with partial data. Keep cursor/page/post bounds and ID deduplication. Reaching a valid post or relationship-list page bound returns an explicit limited scope; malformed or repeated pagination remains fatal. Do not add liker pagination without documented, reviewed endpoint behavior.
+`src/utils/scanner.ts` performs posts, likers, following, and optional followers in order. Every required request must succeed; do not catch errors to continue with partial data. Keep cursor/post/global bounds and ID deduplication. Post collection returns a recent scope only at 150 unique posts; relationship collection is endpoint-complete only when no continuation cursor remains. Malformed or repeated pagination remains fatal. Do not add liker pagination without documented, reviewed endpoint behavior.
 
 Displayed post-like totals come from post records. Leaderboard counts use only identities returned by the liker endpoint and can be incomplete.
 
-`src/utils/storage.ts` stores canonical schema-v3 inputs only after a complete or explicitly bounded scan. Runtime validation and owner-ID matching are mandatory. A compatible same-owner snapshot younger than 24 hours may be reused only before requester creation; follower analysis requires cached follower data. Derived leaderboards and aggregates are recomputed on load. Do not persist, resume, or merge opaque relationship cursors, and do not add a migration framework unless explicitly requested.
+`src/utils/storage.ts` stores canonical schema-v3 inputs only after an endpoint-complete or genuine 150-post-limited scan. Runtime validation and owner-ID matching are mandatory. A compatible same-owner snapshot younger than 24 hours may be reused only before requester creation; automatic reuse requires endpoint-complete relationship scopes, and follower analysis requires endpoint-complete cached follower data. Derived leaderboards and aggregates are recomputed on load. Do not persist, resume, or merge opaque relationship cursors, and do not add a migration framework unless explicitly requested.
 
 ## Build Contract
 
@@ -56,7 +56,7 @@ The landing page must not add analytics, external fonts, raw bundle previews, or
 - `src/bootstrap.ts` -- guarded bundle entry; validates host/login before loading styles or app code
 - `src/main.tsx` -- app mounting, per-run orchestration, AbortController lifecycle, state transitions, derived results
 - `src/utils/utils.ts` -- requester, errors, URLs, aggregation, sorting, exports
-- `src/utils/scanner.ts` -- bounded scan phases and response validation
+- `src/utils/scanner.ts` -- cursor-driven scan phases and response validation
 - `src/utils/storage.ts` -- owner-scoped schema-v3 persistence and 24-hour cache eligibility
 - `src/constants/constants.ts` -- fixed request policy and shared constants
 - `src/components/` -- functional Preact components

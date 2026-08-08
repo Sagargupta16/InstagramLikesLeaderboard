@@ -176,10 +176,18 @@ export function isReusableScan(
     now = Date.now(),
 ): boolean {
     const age = now - saved.timestamp;
+    const postScopeIsReusable = saved.postScope === 'all_posts'
+        ? true
+        : saved.posts.length === REQUEST_POLICY.maxPosts;
+    const relationshipScopesAreReusable = saved.followingScope === 'endpoint_complete'
+        && (saved.followerScope === null || saved.followerScope === 'endpoint_complete');
+
     return age >= 0
         && age < SAVED_SCAN_CACHE_TTL_MS
+        && postScopeIsReusable
+        && relationshipScopesAreReusable
         && (!requestedModes.followerAnalysis
-            || (saved.scanModes.followerAnalysis && saved.followerScope !== null));
+            || (saved.scanModes.followerAnalysis && saved.followerScope === 'endpoint_complete'));
 }
 
 export function loadReusableScan(

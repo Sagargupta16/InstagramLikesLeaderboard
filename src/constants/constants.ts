@@ -16,8 +16,6 @@ export interface RequestPolicy {
     readonly maxRequests: number;
     readonly maxScanMs: number;
     readonly maxPosts: number;
-    readonly maxPostPages: number;
-    readonly maxUserListPages: number;
 }
 
 // Fixed conservative limits. They reduce request pressure, but cannot prevent
@@ -33,8 +31,6 @@ export const REQUEST_POLICY: Readonly<RequestPolicy> = {
     maxRequests: 250,
     maxScanMs: 15 * 60_000,
     maxPosts: 150,
-    maxPostPages: 6,
-    maxUserListPages: 40,
 };
 
 export const LOCAL_STORAGE_KEY = 'ill_scan_results';
