@@ -5,7 +5,6 @@ export interface LikerUserNode {
     readonly full_name: string;
     readonly profile_pic_url: string;
     readonly is_verified: boolean;
-    readonly is_private: boolean;
 }
 
 // Accumulator used during scanning to aggregate likes per user

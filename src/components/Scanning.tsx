@@ -1,81 +1,83 @@
 import React from 'react';
-import { State } from '../model/state';
+import { ScanningPhase, State } from '../model/state';
 
 interface ScanningProps {
-    state: State;
-    scanningPaused: boolean;
-    pauseScan: () => void;
+    readonly state: Extract<State, { status: 'scanning' }>;
+    readonly scanningPaused: boolean;
+    readonly pauseScan: () => void;
+    readonly stopScan: () => void;
 }
 
-export const Scanning = ({ state, scanningPaused, pauseScan }: ScanningProps) => {
-    if (state.status !== 'scanning') {
-        return null;
-    }
-
+export const Scanning = ({ state, scanningPaused, pauseScan, stopScan }: ScanningProps) => {
     const phaseLabel = (() => {
         switch (state.phase) {
             case 'fetching_posts':
-                return `Fetching posts... (${state.posts.length}/${state.totalPostCount > 0 ? state.totalPostCount : '?'})`;
+                return `Collecting posts (${state.posts.length} found)`;
             case 'fetching_likes':
-                return `Fetching likes... (Post ${state.currentPostIndex}/${state.posts.length})`;
+                return `Collecting identified likers (${state.currentPostIndex}/${state.posts.length} posts)`;
             case 'fetching_following':
-                return `Fetching following list... (${state.followingCount})`;
+                return `Collecting following list (${state.followingCount} found)`;
             case 'fetching_followers':
-                return `Fetching followers list... (${state.followerCount})`;
+                return `Collecting followers list (${state.followerCount} found)`;
         }
     })();
 
-    const phases: Array<{ key: string; label: string }> = [
+    const phases: Array<{ key: ScanningPhase; label: string }> = [
         { key: 'fetching_posts', label: '1. Posts' },
-        { key: 'fetching_likes', label: '2. Likes' },
+        { key: 'fetching_likes', label: '2. Likers' },
         { key: 'fetching_following', label: '3. Following' },
     ];
-
     if (state.scanModes.followerAnalysis) {
         phases.push({ key: 'fetching_followers', label: '4. Followers' });
     }
 
-    const getPhaseClass = (phaseTarget: string): string => {
-        const phaseKeys = phases.map(p => p.key);
-        const currentIdx = phaseKeys.indexOf(state.phase);
-        const targetIdx = phaseKeys.indexOf(phaseTarget);
-
-        if (targetIdx < currentIdx) {
-            return 'completed';
-        }
-        if (targetIdx === currentIdx) {
-            return 'active';
-        }
-        return '';
-    };
+    const currentPhase = phases.findIndex(phase => phase.key === state.phase);
 
     return (
-        <section className='scanning-container'>
-            <div className='scanning-phase'>
-                <div className='phase-indicator'>
-                    {phases.map(p => (
-                        <span key={p.key} className={getPhaseClass(p.key)}>{p.label}</span>
+        <main className='scanning-container' aria-live='polite'>
+            <section className='scanning-phase'>
+                <ol className='phase-indicator' aria-label='Scan phases'>
+                    {phases.map((phase, index) => (
+                        <li
+                            key={phase.key}
+                            className={index < currentPhase ? 'completed' : index === currentPhase ? 'active' : ''}
+                            aria-current={index === currentPhase ? 'step' : undefined}
+                        >
+                            {phase.label}
+                        </li>
                     ))}
+                </ol>
+                <h1>{scanningPaused ? 'Scan paused' : phaseLabel}</h1>
+                <progress
+                    className='scanning-progress'
+                    value={state.percentage === null ? undefined : state.percentage}
+                    max={100}
+                    aria-label={state.percentage === null ? 'Phase progress unknown' : `${state.percentage}% complete`}
+                />
+                <div className='scanning-percentage'>
+                    {state.percentage === null ? 'In progress' : `${state.percentage}%`}
                 </div>
-                <h2>{phaseLabel}</h2>
-                <progress className='scanning-progress' value={state.percentage} max={100} />
-                <div className='scanning-percentage'>{state.percentage}%</div>
                 <div className='controls'>
-                    <button className='button-control' onClick={pauseScan}>
+                    <button
+                        type='button'
+                        className='button-control'
+                        onClick={pauseScan}
+                        aria-pressed={scanningPaused}
+                    >
                         {scanningPaused ? 'Resume' : 'Pause'}
                     </button>
+                    <button type='button' className='button-control button-danger' onClick={stopScan}>
+                        Stop
+                    </button>
                 </div>
+                <p className='scanning-detail'>
+                    Pause prevents the next request; it does not cancel one already in progress. Stop aborts this run,
+                    and partial results are never saved.
+                </p>
                 {state.phase === 'fetching_likes' && (
-                    <p className='scanning-detail'>
-                        Unique likers found: {Object.keys(state.likerMap).length}
-                    </p>
+                    <p className='scanning-detail'>Identified likers: {state.identifiedLikerCount}</p>
                 )}
-                {state.phase === 'fetching_posts' && state.posts.length > 0 && (
-                    <p className='scanning-detail'>
-                        Posts collected: {state.posts.length}
-                    </p>
-                )}
-            </div>
-        </section>
+            </section>
+        </main>
     );
 };

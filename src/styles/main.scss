@@ -3,20 +3,21 @@
 // ============================================================
 // Base
 // ============================================================
-* {
+.ill,
+.ill * {
     box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
-html {
+.ill {
+    min-height: 100vh;
     background-color: v.$bg-primary;
     color: v.$text-body;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
-// Shared focus ring for keyboard users
-:focus-visible {
+.ill :focus-visible {
     outline: 2px solid v.$clr-accent;
     outline-offset: 2px;
     border-radius: v.$radius-sm;
@@ -33,15 +34,24 @@ html {
     &::-webkit-scrollbar-thumb:hover { background: v.$neutral-400; }
 }
 
+.ill.with-app-header {
+    padding-top: v.$header-height;
+}
+
 .ill {
-    @keyframes slide-in {
-        from { transform: translateX(100%); opacity: 0; }
-        to   { transform: translateX(0);     opacity: 1; }
+    .flex { display: flex; }
+    .column { flex-direction: column; }
+    .m-clear { margin: 0; }
+    .p-clear { padding: 0; }
+
+    button,
+    input:not([type='checkbox']):not([type='radio']) {
+        min-height: 44px;
     }
 
-    @keyframes slide-out {
-        from { transform: translateX(0);     opacity: 1; }
-        to   { transform: translateX(100%); opacity: 0; }
+    @keyframes ill-toast-in {
+        from { transform: translateX(100%); opacity: 0; }
+        to   { transform: translateX(0);     opacity: 1; }
     }
 
     // ============================================================
@@ -60,24 +70,6 @@ html {
         z-index: 10;
         display: flex;
         flex-direction: column;
-    }
-
-    .progressbar {
-        width: 100%;
-        height: 2px;
-        position: absolute;
-        left: 0;
-        bottom: 0;
-        border: none;
-        background: transparent;
-
-        &::-webkit-progress-bar { background: transparent; }
-        &::-webkit-progress-value {
-            background: linear-gradient(90deg, v.$clr-accent, v.$clr-accent-strong);
-        }
-        &::-moz-progress-bar {
-            background: linear-gradient(90deg, v.$clr-accent, v.$clr-accent-strong);
-        }
     }
 
     .app-header-content {
@@ -113,23 +105,27 @@ html {
         color: v.$text-subtle;
     }
 
-    .search-bar {
-        color: v.$text-primary;
-        background: v.$bg-surface-1;
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: v.$size-small;
+        margin-left: auto;
+    }
+
+    .header-button,
+    .text-button {
+        color: v.$text-subtle;
+        background: transparent;
         border: 1px solid v.$border-soft;
         border-radius: v.$radius-md;
-        padding: 0.45rem v.$size-medium;
-        font-size: 0.875rem;
-        outline: none;
-        margin-left: auto;
-        width: 220px;
-        transition: border-color v.$t-fast v.$ease, background v.$t-fast v.$ease;
+        padding: 0.45rem 0.8rem;
+        cursor: pointer;
+        font-size: 0.82rem;
 
-        &::placeholder { color: v.$text-faint; }
-        &:hover { border-color: v.$border-strong; }
-        &:focus { border-color: v.$clr-accent; background: v.$bg-surface-2; }
-        &:disabled { opacity: 0.4; }
+        &:hover { color: v.$text-primary; border-color: v.$border-strong; }
     }
+
+    .danger-text { color: v.$clr-danger; }
 
     // ============================================================
     // Sidebar
@@ -156,9 +152,29 @@ html {
         color: v.$text-muted;
     }
 
-    // ============================================================
-    // Badges, tabs, buttons
-    // ============================================================
+    .sidebar-search {
+        display: flex;
+        flex-direction: column;
+        gap: v.$size-small;
+        color: v.$text-muted;
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+
+        input {
+            width: 100%;
+            color: v.$text-primary;
+            background: v.$bg-primary;
+            border: 1px solid v.$border-soft;
+            border-radius: v.$radius-md;
+            padding: 0.5rem 0.7rem;
+            font-size: 0.85rem;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+    }
+
     .badge {
         background: v.$bg-surface-2;
         border: 1px solid v.$border-soft;
@@ -207,9 +223,17 @@ html {
         min-width: 0;
     }
 
-    // ============================================================
-    // Leaderboard rows
-    // ============================================================
+    .results-notice {
+        margin: v.$size-medium;
+        padding: 0.8rem v.$size-medium;
+        color: v.$text-subtle;
+        background: v.$bg-surface-1;
+        border: 1px solid v.$border-soft;
+        border-radius: v.$radius-md;
+        font-size: 0.82rem;
+        line-height: 1.5;
+    }
+
     .leaderboard-entry {
         display: flex;
         align-items: center;
@@ -250,6 +274,13 @@ html {
         flex-direction: column;
         min-width: 140px;
         gap: 0.1rem;
+    }
+
+    .entry-username,
+    .entry-fullname {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .entry-username {
@@ -322,7 +353,6 @@ html {
         justify-content: center;
         align-items: center;
         min-height: calc(100vh - #{v.$header-height});
-        padding-top: v.$header-height;
     }
 
     .scanning-phase {
@@ -331,7 +361,7 @@ html {
         padding: v.$size-xlarge;
         width: 100%;
 
-        h2 {
+        h1 {
             font-size: 1.2rem;
             font-weight: 500;
             color: v.$text-body;
@@ -381,14 +411,16 @@ html {
         justify-content: center;
         gap: v.$size-small;
         margin-bottom: v.$size-large;
+        padding: 0;
+        list-style: none;
 
-        span {
+        li {
             padding: 0.4rem 0.9rem;
             border-radius: v.$radius-pill;
             background: v.$bg-surface-2;
             font-size: 0.8rem;
             color: v.$text-muted;
-            transition: all v.$t-base v.$ease;
+            transition: background-color v.$t-base v.$ease, color v.$t-base v.$ease;
 
             &.active {
                 background: v.$clr-accent;
@@ -431,27 +463,9 @@ html {
         }
     }
 
-    button.run-scan {
-        background: transparent;
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 1.8em;
-        height: 160px;
-        width: 160px;
-        border-radius: v.$radius-round;
-        border: 2px solid v.$clr-accent;
-        color: v.$clr-accent;
-        cursor: pointer;
-        font-weight: 600;
-        letter-spacing: 3px;
-        transition: all v.$t-base v.$ease;
-
-        &:hover {
-            background: v.$clr-accent-soft;
-            transform: translate(-50%, -50%) scale(1.04);
-        }
+    .button-danger {
+        color: v.$clr-danger;
+        border-color: rgba(248, 113, 113, 0.45);
     }
 
     .export-btn {
@@ -563,21 +577,14 @@ html {
         right: v.$size-medium;
         width: 100%;
         max-width: 360px;
-        display: none;
+        display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 0.85rem v.$size-medium;
         border-radius: v.$radius-md;
         z-index: 20;
         box-shadow: v.$shadow-md;
-        animation: slide-out v.$t-slow v.$ease;
-        opacity: 0;
-
-        &.show {
-            animation: slide-in v.$t-slow v.$ease;
-            display: flex;
-            opacity: 1;
-        }
+        animation: ill-toast-in v.$t-slow v.$ease;
 
         &.success { background: v.$clr-success; color: v.$neutral-50; }
         &.error   { background: v.$clr-danger;  color: v.$neutral-900; }
@@ -601,16 +608,6 @@ html {
         opacity: 0.8;
 
         &:hover { opacity: 1; }
-    }
-
-    .setting-icon {
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        color: v.$text-muted;
-        transition: color v.$t-fast v.$ease;
-
-        &:hover { color: v.$clr-accent; }
     }
 
     // ============================================================
@@ -665,16 +662,6 @@ html {
             background: v.$bg-surface-2;
         }
 
-        &.mode-option-locked {
-            opacity: 0.65;
-            cursor: default;
-
-            &:hover {
-                border-color: v.$border-soft;
-                background: v.$bg-surface-1;
-            }
-        }
-
         input[type="checkbox"] {
             accent-color: v.$clr-accent;
             width: 18px;
@@ -700,25 +687,52 @@ html {
         color: v.$text-muted;
     }
 
+    .scan-safety-note,
+    .retry-lock {
+        max-width: 560px;
+        margin: 0 0 v.$size-large;
+        font-size: 0.82rem;
+        line-height: 1.5;
+    }
+
+    .scan-safety-note {
+        color: v.$text-subtle;
+    }
+
+    .retry-lock {
+        color: v.$clr-warning;
+    }
+
     .run-scan-btn {
-        background: transparent;
-        font-size: 1.4em;
-        height: 120px;
-        width: 120px;
-        border-radius: v.$radius-round;
-        border: 2px solid v.$clr-accent;
-        color: v.$clr-accent;
+        min-width: 180px;
+        background: v.$clr-accent;
+        border: 1px solid v.$clr-accent;
+        border-radius: v.$radius-md;
+        color: v.$neutral-50;
         cursor: pointer;
-        font-weight: 600;
-        letter-spacing: 3px;
-        transition: all v.$t-base v.$ease;
+        font-size: 1rem;
+        font-weight: 700;
+        padding: 0.75rem 1.5rem;
+        transition: background v.$t-fast v.$ease, border-color v.$t-fast v.$ease;
         margin-bottom: v.$size-medium;
 
-        &:hover {
-            background: v.$clr-accent-soft;
-            transform: scale(1.04);
-            box-shadow: 0 0 40px v.$clr-accent-soft;
+        &:hover:not(:disabled) {
+            background: v.$clr-accent-strong;
+            border-color: v.$clr-accent-strong;
         }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+    }
+
+    .saved-scan-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: v.$size-small;
     }
 
     .load-previous-btn {
@@ -793,11 +807,10 @@ html {
         flex-direction: column;
         align-items: center;
         gap: 0.35rem;
-        transition: border-color v.$t-fast v.$ease, transform v.$t-fast v.$ease;
+        transition: border-color v.$t-fast v.$ease;
 
         &:hover {
             border-color: v.$border-soft;
-            transform: translateY(-1px);
         }
 
         &.stat-card-highlight {
@@ -824,7 +837,7 @@ html {
     .dashboard-section {
         margin-bottom: v.$size-xlarge;
 
-        h3 {
+        h2 {
             font-size: 1.05rem;
             font-weight: 600;
             margin-bottom: v.$size-medium;
@@ -917,21 +930,6 @@ html {
         font-size: 0.92rem !important;
     }
 
-    .follower-search-input {
-        width: 100%;
-        color: v.$text-primary;
-        background: v.$bg-primary;
-        border: 1px solid v.$border-soft;
-        border-radius: v.$radius-md;
-        padding: 0.5rem 0.7rem;
-        font-size: 0.85rem;
-        outline: none;
-        transition: border-color v.$t-fast v.$ease;
-
-        &::placeholder { color: v.$text-faint; }
-        &:focus { border-color: v.$clr-accent; }
-    }
-
     .follower-likes-info {
         margin-left: auto;
         font-size: 0.84rem;
@@ -1002,11 +1000,19 @@ html {
 
     @media (max-width: 768px) {
         .app-sidebar {
-            min-width: 180px;
-            max-width: 180px;
-            padding: v.$size-small;
+            position: static;
+            width: 100%;
+            min-width: 0;
+            max-width: none;
+            height: auto;
+            border-inline-end: 0;
+            border-bottom: 1px solid v.$border-subtle;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            padding: v.$size-medium;
         }
 
+        .flex { flex-direction: column; }
         .entry-info { min-width: 90px; }
         .entry-likes-bar { min-width: 80px; }
 
@@ -1025,16 +1031,27 @@ html {
             padding: v.$size-small;
         }
 
-        .search-bar { width: 140px; }
     }
 
     @media (max-width: 480px) {
-        .app-sidebar {
-            min-width: 150px;
-            max-width: 150px;
+        .header-button { padding-inline: v.$size-small; }
+
+        .leaderboard-row {
+            display: grid;
+            grid-template-columns: 30px 32px minmax(0, 1fr) 44px;
+            grid-template-areas:
+                'rank avatar info hide'
+                '. likes likes percentage';
+            gap: v.$size-xxsmall;
+
+            .entry-rank { grid-area: rank; min-width: 0; }
+            .entry-avatar { grid-area: avatar; width: 32px; height: 32px; }
+            .entry-info { grid-area: info; min-width: 0; }
+            .entry-likes-bar { grid-area: likes; width: 100%; min-width: 0; }
+            .entry-percentage { grid-area: percentage; min-width: 0; }
+            .entry-hide-btn { grid-area: hide; justify-self: end; }
         }
 
-        .entry-likes-bar { display: none; }
         .phase-indicator { flex-direction: column; gap: v.$size-small; }
         .logo-text { display: none; }
         .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1051,6 +1068,19 @@ html {
         }
 
         .mode-options { max-width: 100%; }
-        .entry-hide-btn { display: none; }
+        .app-sidebar { grid-template-columns: 1fr; }
+        .header-actions .danger-text { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        &,
+        *,
+        *::before,
+        *::after {
+            scroll-behavior: auto !important;
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
     }
 }

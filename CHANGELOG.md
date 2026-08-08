@@ -1,5 +1,36 @@
 # Changelog
 
+## [2.1.0] - 2026-08-08
+
+### Added
+
+- Sequential per-run request controller with abortable delays/fetches, strict response classification, request timeout, and hard request/time/page/post bounds
+- Explicit Stop control, rate-limit retry lock, owner/scope result notice, and saved-data deletion
+- Runtime-validated, owner-scoped local storage schema v2 with derived results rebuilt on load
+- Focused mocked tests for request behavior, bounded scanning, storage validation, defaults, and deterministic bundle embedding
+- Pull-request CI and automated GitHub Pages deployment using Node 24, script-disabled clean installs, least-privilege permissions, and immutable action SHAs
+- Repository governance, dependency automation, badges, cross-links, and development guidance accumulated since 2.0.0
+
+### Changed
+
+- Fixed request pacing at randomized 2–3 second gaps across Stop/restart boundaries; removed user-editable timing controls and automatic recovery loops
+- Limited transient failures to one retry and made auth, challenge, rate-limit, timeout, malformed-response, and bounds failures fatal
+- Moved host and login guards ahead of style/app initialization so unsupported pages remain untouched
+- Made scans all-or-nothing: required-request failures no longer display or save partial data
+- Bounded post collection at 150 unique recent posts and deduplicated posts, cursors, per-post liker identities, and user lists
+- Defaulted follower comparison off to avoid unnecessary follower-list requests
+- Corrected dashboard totals to use displayed post-like counts while labeling leaderboard values as identified likes
+- Reworked progress, responsive layout, accessibility targets, reduced motion, local search, export field names, and incomplete-data wording
+- Replaced manual bundle escaping with marker validation, safe serialization, deterministic `--check` parity, and streamlined npm scripts
+- Exact-pinned the current Preact, TypeScript, ESLint, Sass, Webpack, and test toolchain; enabled stricter index-access checks and related hygiene fixes
+- Corrected Node/deployment documentation and the request cooldown cadence
+
+### Removed
+
+- Google Analytics, external web fonts, raw bundle preview, modal copy confirmation, and deprecated clipboard fallback from the landing page
+- Babel tooling, obsolete timing/settings UI, dead wrapper/icon components, and unused helper styles
+- Vulnerable transitive dependency versions; `npm audit` reports zero known vulnerabilities for this release
+
 ## [2.0.0] - 2026-04-04
 
 ### Added

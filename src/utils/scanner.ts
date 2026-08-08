@@ -1,257 +1,243 @@
-import { PostNode } from '../model/post';
+import { PostNode, PostScope } from '../model/post';
 import { LikerAccumulator, LikerUserNode } from '../model/user';
-import { Timings } from '../model/timings';
 import {
-    PHASE_WARMUP_MS,
-    POST_FETCHES_BEFORE_SLEEP,
-    LIKER_FETCHES_BEFORE_SLEEP,
-    USER_LIST_FETCHES_BEFORE_SLEEP,
-} from '../constants/constants';
-import {
-    sleep,
-    randomizedSleep,
-    rateLimitedFetch,
-    resetGlobalRequestCount,
-    userMediaUrlGenerator,
-    postLikersUrlGenerator,
-    followingUrlGenerator,
+    IgRequester,
+    RequestError,
     followersUrlGenerator,
-    buildLikerMap,
+    followingUrlGenerator,
+    postLikersUrlGenerator,
+    userMediaUrlGenerator,
 } from './utils';
 
-interface ToastMessage {
-    show: boolean;
-    text: string;
-    style?: 'success' | 'error' | 'warning' | 'info';
+export interface PostsResult {
+    readonly posts: readonly PostNode[];
+    readonly postScope: PostScope;
 }
 
-// --- Phase 1: Fetch all posts ---
-
-export async function fetchAllPosts(
-    timings: Timings,
-    pauseRef: { readonly current: boolean },
-    onProgress: (posts: readonly PostNode[], percentage: number) => void,
-    onToast: (toast: ToastMessage) => void,
-): Promise<PostNode[]> {
-    const posts: PostNode[] = [];
-    let postUrl = userMediaUrlGenerator();
-    let moreAvailable = true;
-    let postCycle = 0;
-
-    resetGlobalRequestCount();
-    await sleep(PHASE_WARMUP_MS);
-
-    while (moreAvailable) {
-        let data: any;
-        try {
-            data = await rateLimitedFetch(postUrl, { onToast, pauseRef, label: 'Posts' });
-        } catch (e) {
-            console.error('Error fetching posts:', e);
-            onToast({ show: true, text: 'Failed to fetch posts. Continuing with what we have.', style: 'error' });
-            break;
-        }
-
-        const items = data.items || [];
-        for (const item of items) {
-            posts.push({
-                id: item.pk || item.id,
-                shortcode: item.code,
-                edge_media_preview_like: { count: item.like_count || 0 },
-                edge_media_to_caption: {
-                    edges: item.caption ? [{ node: { text: item.caption.text || '' } }] : [],
-                },
-                thumbnail_src: (item.image_versions2 && item.image_versions2.candidates && item.image_versions2.candidates[0])
-                    ? item.image_versions2.candidates[0].url
-                    : '',
-                taken_at_timestamp: item.taken_at || 0,
-            });
-        }
-
-        moreAvailable = data.more_available === true;
-        if (moreAvailable && data.next_max_id) {
-            postUrl = userMediaUrlGenerator(data.next_max_id);
-        } else {
-            moreAvailable = false;
-        }
-
-        onProgress(posts, moreAvailable ? Math.min(90, posts.length * 2) : 100);
-
-        while (pauseRef.current) {
-            await sleep(1000);
-        }
-
-        await sleep(randomizedSleep(timings.timeBetweenPostFetches));
-        postCycle++;
-        if (postCycle >= POST_FETCHES_BEFORE_SLEEP) {
-            postCycle = 0;
-            onToast({ show: true, text: `Sleeping ${timings.timeToWaitAfterSixPostFetches / 1000}s to avoid rate limit...` });
-            await sleep(timings.timeToWaitAfterSixPostFetches);
-            onToast({ show: false, text: '' });
-        }
-    }
-
-    console.info(`Phase 1 complete: ${posts.length} posts collected.`);
-    return posts;
-}
-
-// --- Phase 2: Fetch likers for each post ---
-
-export async function fetchAllLikers(
-    posts: readonly PostNode[],
-    timings: Timings,
-    pauseRef: { readonly current: boolean },
-    onProgress: (currentIndex: number, likerMap: Record<string, LikerAccumulator>, percentage: number) => void,
-    onToast: (toast: ToastMessage) => void,
-): Promise<Record<string, LikerAccumulator>> {
-    let likerMap: Record<string, LikerAccumulator> = {};
-
-    onToast({ show: true, text: 'Warming up before fetching likers...', style: 'info' });
-    await sleep(PHASE_WARMUP_MS);
-    onToast({ show: false, text: '' });
-
-    for (const [i, post] of posts.entries()) {
-        const likerUrl = postLikersUrlGenerator(String(post.id));
-        let likerData: any;
-
-        try {
-            likerData = await rateLimitedFetch(likerUrl, { onToast, pauseRef, label: `Likers (${i + 1}/${posts.length})` });
-        } catch {
-            console.warn(`Skipping likers for post ${post.shortcode} after retries`);
-            likerData = null;
-        }
-
-        if (likerData && likerData.users) {
-            const likers: LikerUserNode[] = likerData.users.map((u: any) => ({
-                id: String(u.pk),
-                username: u.username,
-                full_name: u.full_name || '',
-                profile_pic_url: u.profile_pic_url || '',
-                is_verified: u.is_verified || false,
-                is_private: u.is_private || false,
-            }));
-            likerMap = buildLikerMap(likerMap, likers);
-        }
-
-        onProgress(i + 1, likerMap, Math.round(((i + 1) / posts.length) * 100));
-
-        while (pauseRef.current) {
-            await sleep(1000);
-        }
-
-        await sleep(randomizedSleep(timings.timeBetweenLikerFetches));
-        if ((i + 1) % LIKER_FETCHES_BEFORE_SLEEP === 0 && i < posts.length - 1) {
-            onToast({ show: true, text: `Sleeping ${timings.timeToWaitAfterFiveLikerFetches / 1000}s to avoid rate limit...` });
-            await sleep(timings.timeToWaitAfterFiveLikerFetches);
-            onToast({ show: false, text: '' });
-        }
-    }
-
-    console.info(`Phase 2 complete: ${Object.keys(likerMap).length} unique likers found.`);
-    return likerMap;
-}
-
-// --- Phase 3: Fetch following list ---
-
-interface FetchUsersResult {
+export interface FetchUsersResult {
     readonly ids: Set<string>;
     readonly users: Record<string, LikerUserNode>;
 }
 
+function asRecord(value: unknown, context: string): Record<string, unknown> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new RequestError('invalid_response', `Instagram returned invalid ${context} data.`);
+    }
+    return value as Record<string, unknown>;
+}
+
+function nonEmptyId(value: unknown, context: string): string {
+    if ((typeof value !== 'string' && typeof value !== 'number') || String(value).trim() === '') {
+        throw new RequestError('invalid_response', `Instagram returned a ${context} without an ID.`);
+    }
+    return String(value);
+}
+
+function optionalString(value: unknown): string {
+    return typeof value === 'string' ? value : '';
+}
+
+function parseUser(value: unknown): LikerUserNode {
+    const user = asRecord(value, 'user');
+    if (typeof user.username !== 'string' || user.username === '') {
+        throw new RequestError('invalid_response', 'Instagram returned a user without a username.');
+    }
+    return {
+        id: nonEmptyId(user.pk ?? user.id, 'user'),
+        username: user.username,
+        full_name: optionalString(user.full_name),
+        profile_pic_url: optionalString(user.profile_pic_url),
+        is_verified: user.is_verified === true,
+    };
+}
+
+function parsePost(value: unknown): PostNode {
+    const item = asRecord(value, 'post');
+    const caption = item.caption && typeof item.caption === 'object'
+        ? optionalString((item.caption as Record<string, unknown>).text)
+        : '';
+    if (typeof item.like_count !== 'number' || !Number.isFinite(item.like_count) || item.like_count < 0) {
+        throw new RequestError('invalid_response', 'Instagram returned a post without a valid like count.');
+    }
+
+    return {
+        id: nonEmptyId(item.pk ?? item.id, 'post'),
+        edge_media_preview_like: { count: item.like_count },
+        edge_media_to_caption: {
+            edges: caption === '' ? [] : [{ node: { text: caption } }],
+        },
+    };
+}
+
+function parseCursor(value: unknown, context: string): string | null {
+    if (value === undefined || value === null || value === '') {
+        return null;
+    }
+    if ((typeof value !== 'string' && typeof value !== 'number') || String(value).trim() === '') {
+        throw new RequestError('bounds', `Instagram returned a malformed ${context} cursor.`);
+    }
+    return String(value);
+}
+
+export async function fetchAllPosts(
+    requester: IgRequester,
+    onProgress: (posts: readonly PostNode[]) => void,
+): Promise<PostsResult> {
+    const posts: PostNode[] = [];
+    const postIds = new Set<string>();
+    const cursors = new Set<string>();
+    let cursor: string | undefined;
+
+    for (let page = 1; page <= requester.policy.maxPostPages; page++) {
+        const data = asRecord(
+            await requester.request<unknown>(userMediaUrlGenerator(requester.ownerId, cursor), 'Posts'),
+            'post list',
+        );
+        if (!Array.isArray(data.items) || typeof data.more_available !== 'boolean') {
+            throw new RequestError('invalid_response', 'Instagram returned an invalid post list.');
+        }
+
+        let uniqueOnPage = 0;
+        let exceededPostLimit = false;
+        for (const value of data.items) {
+            const post = parsePost(value);
+            if (postIds.has(post.id)) {
+                continue;
+            }
+            postIds.add(post.id);
+            uniqueOnPage++;
+            if (posts.length >= requester.policy.maxPosts) {
+                exceededPostLimit = true;
+                continue;
+            }
+            posts.push(post);
+        }
+        onProgress([...posts]);
+
+        if (exceededPostLimit || (posts.length >= requester.policy.maxPosts && data.more_available)) {
+            return { posts, postScope: 'recent_limit' };
+        }
+        if (!data.more_available) {
+            return { posts, postScope: 'all_posts' };
+        }
+        if (uniqueOnPage === 0) {
+            throw new RequestError('bounds', 'Instagram repeated a post page before the scan completed.');
+        }
+
+        const nextCursor = parseCursor(data.next_max_id, 'post');
+        if (nextCursor === null) {
+            throw new RequestError('bounds', 'Instagram declared more posts without a continuation cursor.');
+        }
+        if (cursors.has(nextCursor)) {
+            throw new RequestError('bounds', 'Instagram repeated a post cursor before the scan completed.');
+        }
+        if (page >= requester.policy.maxPostPages) {
+            throw new RequestError('bounds', 'The post scan reached its page limit before completion.');
+        }
+        cursors.add(nextCursor);
+        cursor = nextCursor;
+    }
+
+    throw new RequestError('bounds', 'The post scan ended unexpectedly.');
+}
+
+export async function fetchAllLikers(
+    posts: readonly PostNode[],
+    requester: IgRequester,
+    onProgress: (
+        currentIndex: number,
+        identifiedLikerCount: number,
+        percentage: number,
+    ) => void,
+): Promise<Record<string, LikerAccumulator>> {
+    const likerMap: Record<string, LikerAccumulator> = {};
+    let identifiedLikerCount = 0;
+
+    for (const [index, post] of posts.entries()) {
+        const data = asRecord(
+            await requester.request<unknown>(postLikersUrlGenerator(post.id), `Likers ${index + 1}/${posts.length}`),
+            'liker list',
+        );
+        if (!Array.isArray(data.users)) {
+            throw new RequestError('invalid_response', 'Instagram returned an invalid liker list.');
+        }
+
+        const seenForPost = new Set<string>();
+        for (const value of data.users) {
+            const user = parseUser(value);
+            if (seenForPost.has(user.id)) {
+                continue;
+            }
+            seenForPost.add(user.id);
+
+            const existing = likerMap[user.id];
+            if (existing) {
+                likerMap[user.id] = { user, likesCount: existing.likesCount + 1 };
+            } else {
+                likerMap[user.id] = { user, likesCount: 1 };
+                identifiedLikerCount++;
+            }
+        }
+        onProgress(index + 1, identifiedLikerCount, Math.round(((index + 1) / posts.length) * 100));
+    }
+
+    return likerMap;
+}
+
 async function fetchUserList(
-    urlGenerator: (nextMaxId?: string) => string,
-    timings: { timeBetween: number; timeAfterSix: number },
-    pauseRef: { readonly current: boolean },
-    onProgress: (count: number, percentage: number) => void,
-    onToast: (toast: ToastMessage) => void,
+    requester: IgRequester,
+    urlGenerator: (ownerId: string, nextMaxId?: string) => string,
     label: string,
+    onProgress: (count: number) => void,
 ): Promise<FetchUsersResult> {
     const ids = new Set<string>();
     const users: Record<string, LikerUserNode> = {};
-    let url = urlGenerator();
-    let hasMore = true;
-    let cycle = 0;
+    const cursors = new Set<string>();
+    let cursor: string | undefined;
 
-    onToast({ show: true, text: `Warming up before fetching ${label.toLowerCase()}...`, style: 'info' });
-    await sleep(PHASE_WARMUP_MS);
-    onToast({ show: false, text: '' });
-
-    while (hasMore) {
-        let data: any;
-        try {
-            data = await rateLimitedFetch(url, { onToast, pauseRef, label });
-        } catch (e) {
-            console.error(`Error fetching ${label}:`, e);
-            onToast({ show: true, text: `Failed to fetch ${label}. Continuing with what we have.`, style: 'error' });
-            break;
+    for (let page = 1; page <= requester.policy.maxUserListPages; page++) {
+        const data = asRecord(
+            await requester.request<unknown>(urlGenerator(requester.ownerId, cursor), label),
+            `${label.toLowerCase()} list`,
+        );
+        if (!Array.isArray(data.users)) {
+            throw new RequestError('invalid_response', `Instagram returned an invalid ${label.toLowerCase()} list.`);
         }
 
-        const userList = data.users || [];
-        userList.forEach((u: any) => {
-            const id = String(u.pk);
-            ids.add(id);
-            users[id] = {
-                id,
-                username: u.username,
-                full_name: u.full_name || '',
-                profile_pic_url: u.profile_pic_url || '',
-                is_verified: u.is_verified || false,
-                is_private: u.is_private || false,
-            };
-        });
-
-        hasMore = !!data.next_max_id;
-        if (hasMore) {
-            url = urlGenerator(data.next_max_id);
+        for (const value of data.users) {
+            const user = parseUser(value);
+            ids.add(user.id);
+            users[user.id] = user;
         }
+        onProgress(ids.size);
 
-        onProgress(ids.size, hasMore ? Math.min(90, ids.size) : 100);
-
-        while (pauseRef.current) {
-            await sleep(1000);
+        const nextCursor = parseCursor(data.next_max_id, label.toLowerCase());
+        if (nextCursor === null) {
+            return { ids, users };
         }
-
-        await sleep(randomizedSleep(timings.timeBetween));
-        cycle++;
-        if (cycle >= USER_LIST_FETCHES_BEFORE_SLEEP) {
-            cycle = 0;
-            onToast({ show: true, text: `Sleeping ${timings.timeAfterSix / 1000}s to avoid rate limit...` });
-            await sleep(timings.timeAfterSix);
-            onToast({ show: false, text: '' });
+        if (cursors.has(nextCursor)) {
+            throw new RequestError('bounds', `Instagram repeated the ${label.toLowerCase()} cursor.`);
         }
+        if (page >= requester.policy.maxUserListPages) {
+            throw new RequestError('bounds', `The ${label.toLowerCase()} scan reached its page limit.`);
+        }
+        cursors.add(nextCursor);
+        cursor = nextCursor;
     }
 
-    console.info(`${label} complete: ${ids.size} users.`);
-    return { ids, users };
+    throw new RequestError('bounds', `The ${label.toLowerCase()} scan ended unexpectedly.`);
 }
 
-export async function fetchFollowing(
-    timings: Timings,
-    pauseRef: { readonly current: boolean },
-    onProgress: (count: number, percentage: number) => void,
-    onToast: (toast: ToastMessage) => void,
+export function fetchFollowing(
+    requester: IgRequester,
+    onProgress: (count: number) => void,
 ): Promise<FetchUsersResult> {
-    return fetchUserList(
-        followingUrlGenerator,
-        { timeBetween: timings.timeBetweenFollowingFetches, timeAfterSix: timings.timeToWaitAfterSixFollowingFetches },
-        pauseRef,
-        onProgress,
-        onToast,
-        'Following',
-    );
+    return fetchUserList(requester, followingUrlGenerator, 'Following', onProgress);
 }
 
-export async function fetchFollowers(
-    timings: Timings,
-    pauseRef: { readonly current: boolean },
-    onProgress: (count: number, percentage: number) => void,
-    onToast: (toast: ToastMessage) => void,
+export function fetchFollowers(
+    requester: IgRequester,
+    onProgress: (count: number) => void,
 ): Promise<FetchUsersResult> {
-    return fetchUserList(
-        followersUrlGenerator,
-        { timeBetween: timings.timeBetweenFollowerFetches, timeAfterSix: timings.timeToWaitAfterSixFollowerFetches },
-        pauseRef,
-        onProgress,
-        onToast,
-        'Followers',
-    );
+    return fetchUserList(requester, followersUrlGenerator, 'Followers', onProgress);
 }

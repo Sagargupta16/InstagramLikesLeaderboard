@@ -1,32 +1,34 @@
 # Security Policy
 
-## Reporting Vulnerabilities
+## Reporting a Vulnerability
 
-Report vulnerabilities to sg85207@gmail.com or open a GitHub issue.
+Use [GitHub's private vulnerability reporting form](https://github.com/Sagargupta16/InstagramLikesLeaderboard/security/advisories/new) or email `sg85207@gmail.com`. Do not include account cookies, API responses, or other personal data in a public issue.
 
-## How This Tool Handles Your Data
+## Data Boundaries
 
-This tool runs **entirely in your browser** on instagram.com. It:
+The landing page and injected application have no project-operated backend. The application:
 
-- Uses your existing Instagram session cookies to call Instagram's API
-- Never sends your data to any external server
-- Never stores credentials or tokens
-- Caches scan results in localStorage (your browser only)
-- Does not inject any tracking, analytics, or third-party scripts
+- Uses the signed-in browser's Instagram cookies to make requests directly to Instagram
+- Does not read, copy, or persist session cookies as result data
+- Stores only a completed schema-v2 scan in Instagram's local storage
+- Validates saved data at runtime and loads it only for the captured Instagram account ID
+- Provides a control to delete the saved local copy
+- Loads no analytics, external fonts, or third-party scripts from the landing page
 
-The bundled script is fully open source and can be audited in `src/`.
+The generated bundle is embedded in `public/index.html` and can be audited against `src/`. `npm run check:generated` verifies that the embedded bundle matches a fresh production build.
 
-## Rate Limiting
+## Account-Safety Boundaries
 
-The tool includes built-in rate limiting to avoid triggering Instagram's anti-abuse systems:
+This project uses private, undocumented Instagram web endpoints. No implementation or delay can guarantee avoiding throttling, checkpoints, temporary restrictions, or enforcement.
 
-- Delays between API requests with randomized jitter
-- Exponential backoff on failed requests
-- Automatic cooldown when approaching rate limits
-- 429 detection with 60-second auto-pause
+Version 2.1.0 uses one sequential requester with fixed 2–3 second gaps, a 20-second timeout, a 250-request/15-minute run limit, a 150-post limit, and bounded pagination. It retries only a network failure or HTTP 408/500/502/503/504, at most once. It does not retry authentication failures, challenge/checkpoint responses, rate limits, timeouts, malformed responses, or user cancellation.
 
-Use the default timing settings unless you have a specific reason to change them. Lowering delays increases the risk of a temporary account restriction from Instagram.
+Any required-request failure stops the run. Partial results are not displayed or persisted. Stop aborts delay and in-flight work; Pause only prevents the next request.
+
+## Dependency and CI Policy
+
+Dependencies are exact-pinned in `package.json` and locked by `package-lock.json`. CI uses `npm ci`, runs the full check suite, audits high-severity dependencies, and pins third-party GitHub Actions by immutable commit SHA.
 
 ## Supported Versions
 
-Only the latest version on `main` is supported.
+Only the latest release on `main` is supported. Security fixes are not backported.

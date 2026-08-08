@@ -1,36 +1,41 @@
 export const INSTAGRAM_HOSTNAME = 'www.instagram.com';
 export const LEADERBOARD_ENTRIES_PER_PAGE = 50;
-export const MAX_RETRIES = 5;
 
-// Instagram Web App ID (required header for v1 API)
+// Instagram Web App ID required by the private web endpoints used by this tool.
 export const IG_APP_ID = '936619743392459';
-
-// Posts per page (Instagram allows up to ~50, 33 balances speed vs safety)
 export const POSTS_PER_PAGE = 33;
 
-// How many fetches in a phase before injecting a longer "cool-off" sleep.
-// These pair with the DEFAULT_TIME_TO_WAIT_AFTER_* timing constants below.
-export const POST_FETCHES_BEFORE_SLEEP = 6;
-export const LIKER_FETCHES_BEFORE_SLEEP = 5;
-export const USER_LIST_FETCHES_BEFORE_SLEEP = 6;
+export interface RequestPolicy {
+    readonly minGapMs: number;
+    readonly maxGapMs: number;
+    readonly requestTimeoutMs: number;
+    readonly maxAttempts: number;
+    readonly retryDelayMs: number;
+    readonly maxTransientRetryAfterMs: number;
+    readonly rateLimitFallbackMs: number;
+    readonly maxRequests: number;
+    readonly maxScanMs: number;
+    readonly maxPosts: number;
+    readonly maxPostPages: number;
+    readonly maxUserListPages: number;
+}
 
-// Timing defaults (ms)
-export const DEFAULT_TIME_BETWEEN_POST_FETCHES = 1000;
-export const DEFAULT_TIME_TO_WAIT_AFTER_SIX_POST_FETCHES = 10000;
-export const DEFAULT_TIME_BETWEEN_LIKER_FETCHES = 1000;
-export const DEFAULT_TIME_TO_WAIT_AFTER_FIVE_LIKER_FETCHES = 8000;
-export const DEFAULT_TIME_BETWEEN_FOLLOWING_FETCHES = 1000;
-export const DEFAULT_TIME_TO_WAIT_AFTER_SIX_FOLLOWING_FETCHES = 10000;
-export const DEFAULT_TIME_BETWEEN_FOLLOWER_FETCHES = 1000;
-export const DEFAULT_TIME_TO_WAIT_AFTER_SIX_FOLLOWER_FETCHES = 10000;
-
-// Rate limiting
-export const RATE_LIMIT_COOLDOWN_MS = 60000;  // 60s pause on 429
-export const GLOBAL_COOLDOWN_THRESHOLD = 65;   // inject cooldown after this many requests
-export const GLOBAL_COOLDOWN_MS = 30000;       // 30s global cooldown
-export const PHASE_WARMUP_MS = 2500;           // delay before first request of each phase
+// Fixed conservative limits. They reduce request pressure, but cannot prevent
+// Instagram throttling, checkpoints, temporary restrictions, or enforcement.
+export const REQUEST_POLICY: Readonly<RequestPolicy> = {
+    minGapMs: 2_000,
+    maxGapMs: 3_000,
+    requestTimeoutMs: 20_000,
+    maxAttempts: 2,
+    retryDelayMs: 5_000,
+    maxTransientRetryAfterMs: 60_000,
+    rateLimitFallbackMs: 15 * 60_000,
+    maxRequests: 250,
+    maxScanMs: 15 * 60_000,
+    maxPosts: 150,
+    maxPostPages: 6,
+    maxUserListPages: 40,
+};
 
 export const LOCAL_STORAGE_KEY = 'ill_scan_results';
-
-// Max characters of a post caption shown in the dashboard before truncating.
 export const CAPTION_PREVIEW_LENGTH = 150;

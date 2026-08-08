@@ -1,40 +1,54 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScanModes, DEFAULT_SCAN_MODES } from '../model/scan-modes';
 import { SavedScan, formatTimeSince } from '../utils/storage';
 
 interface ModeSelectorProps {
-    onScan: (modes: ScanModes) => void;
-    onLoadPrevious: () => void;
-    savedScan: SavedScan | null;
+    readonly onScan: (modes: ScanModes) => void;
+    readonly onLoadPrevious: () => void;
+    readonly onDeleteSaved: () => void;
+    readonly savedScan: SavedScan | null;
+    readonly retryAt: number | null;
 }
 
-export const ModeSelector = ({ onScan, onLoadPrevious, savedScan }: ModeSelectorProps) => {
+export const ModeSelector = ({
+    onScan,
+    onLoadPrevious,
+    onDeleteSaved,
+    savedScan,
+    retryAt,
+}: ModeSelectorProps) => {
     const [modes, setModes] = useState(DEFAULT_SCAN_MODES);
+    const [now, setNow] = useState(Date.now());
+
+    useEffect(() => {
+        if (retryAt === null) {
+            return undefined;
+        }
+        const timer = window.setTimeout(
+            () => setNow(Date.now()),
+            Math.max(0, retryAt - Date.now()),
+        );
+        return () => window.clearTimeout(timer);
+    }, [retryAt]);
+
+    const retryBlocked = retryAt !== null && retryAt > now;
 
     return (
-        <div className='mode-selector'>
-            <h2 className='mode-selector-title'>Choose Analysis Modes</h2>
-            <p className='mode-selector-subtitle'>Select what to analyze, then hit RUN</p>
+        <main className='mode-selector'>
+            <h1 className='mode-selector-title'>Analyze recent Instagram activity</h1>
+            <p className='mode-selector-subtitle'>The likes leaderboard is always included. Add only the optional views you need.</p>
 
             <div className='mode-options'>
-                <label className='mode-option mode-option-locked'>
-                    <input type='checkbox' checked disabled />
-                    <div className='mode-option-content'>
-                        <span className='mode-option-name'>Likes Leaderboard</span>
-                        <span className='mode-option-desc'>Ranked list of who likes your posts the most</span>
-                    </div>
-                </label>
-
                 <label className='mode-option'>
                     <input
                         type='checkbox'
                         checked={modes.dashboard}
                         onChange={() => setModes({ ...modes, dashboard: !modes.dashboard })}
                     />
-                    <div className='mode-option-content'>
-                        <span className='mode-option-name'>Stats Dashboard</span>
-                        <span className='mode-option-desc'>Engagement metrics, top fans, post stats</span>
-                    </div>
+                    <span className='mode-option-content'>
+                        <span className='mode-option-name'>Stats dashboard</span>
+                        <span className='mode-option-desc'>Displayed post-like totals and top identified likers</span>
+                    </span>
                 </label>
 
                 <label className='mode-option'>
@@ -43,20 +57,43 @@ export const ModeSelector = ({ onScan, onLoadPrevious, savedScan }: ModeSelector
                         checked={modes.followerAnalysis}
                         onChange={() => setModes({ ...modes, followerAnalysis: !modes.followerAnalysis })}
                     />
-                    <div className='mode-option-content'>
-                        <span className='mode-option-name'>Follower Analysis</span>
-                        <span className='mode-option-desc'>Who does not follow back, ghost followers, mutuals</span>
-                    </div>
+                    <span className='mode-option-content'>
+                        <span className='mode-option-name'>Follower comparison</span>
+                        <span className='mode-option-desc'>Adds your followers list; off by default to reduce requests</span>
+                    </span>
                 </label>
             </div>
 
-            <button className='run-scan-btn' onClick={() => onScan(modes)}>RUN</button>
+            <p className='scan-safety-note'>
+                Requests are sequential and use fixed conservative pacing. This reduces pressure but cannot guarantee
+                avoiding throttling, checkpoints, temporary restrictions, or enforcement.
+            </p>
+
+            {retryBlocked && (
+                <p className='retry-lock' role='status'>
+                    Instagram requested a cooldown. Start is locked until {new Date(retryAt).toLocaleTimeString()}.
+                </p>
+            )}
+
+            <button
+                type='button'
+                className='run-scan-btn'
+                onClick={() => onScan(modes)}
+                disabled={retryBlocked}
+            >
+                Start scan
+            </button>
 
             {savedScan && (
-                <button className='load-previous-btn' onClick={onLoadPrevious}>
-                    Load previous results ({savedScan.totalPostsScanned} posts, {formatTimeSince(savedScan.timestamp)})
-                </button>
+                <div className='saved-scan-actions'>
+                    <button type='button' className='load-previous-btn' onClick={onLoadPrevious}>
+                        Load saved scan ({savedScan.posts.length} posts, {formatTimeSince(savedScan.timestamp)})
+                    </button>
+                    <button type='button' className='text-button danger-text' onClick={onDeleteSaved}>
+                        Delete saved scan
+                    </button>
+                </div>
             )}
-        </div>
+        </main>
     );
 };

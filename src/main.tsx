@@ -7,22 +7,22 @@ import { LikerUserNode } from './model/user';
 import { ScanModes } from './model/scan-modes';
 import { ResultsView } from './model/results-view';
 import {
-    INSTAGRAM_HOSTNAME,
-    DEFAULT_TIME_BETWEEN_POST_FETCHES,
-    DEFAULT_TIME_TO_WAIT_AFTER_SIX_POST_FETCHES,
-    DEFAULT_TIME_BETWEEN_LIKER_FETCHES,
-    DEFAULT_TIME_TO_WAIT_AFTER_FIVE_LIKER_FETCHES,
-    DEFAULT_TIME_BETWEEN_FOLLOWING_FETCHES,
-    DEFAULT_TIME_TO_WAIT_AFTER_SIX_FOLLOWING_FETCHES,
-    DEFAULT_TIME_BETWEEN_FOLLOWER_FETCHES,
-    DEFAULT_TIME_TO_WAIT_AFTER_SIX_FOLLOWER_FETCHES,
-} from './constants/constants';
-import { assertUnreachable, buildLeaderboard } from './utils/utils';
+    RequestError,
+    assertUnreachable,
+    buildLeaderboard,
+    createIgRequester,
+    isRequestError,
+} from './utils/utils';
 import { fetchAllPosts, fetchAllLikers, fetchFollowing, fetchFollowers } from './utils/scanner';
-import { saveScanResults, loadScanResults, SavedScan } from './utils/storage';
+import {
+    SavedScan,
+    clearScanResults,
+    loadScanResults,
+    saveScanResults,
+} from './utils/storage';
 
 import { Toolbar } from './components/Toolbar';
-import { NotScanning } from './components/NotScanning';
+import { ModeSelector } from './components/ModeSelector';
 import { Scanning } from './components/Scanning';
 import { Leaderboard } from './components/Leaderboard';
 import { Dashboard } from './components/Dashboard';
@@ -31,252 +31,343 @@ import { ResultsNav } from './components/ResultsNav';
 import { Toast } from './components/Toast';
 
 interface ToastState {
-    show: boolean;
-    text: string;
-    style?: 'success' | 'error' | 'warning' | 'info';
+    readonly show: boolean;
+    readonly text: string;
+    readonly style?: 'success' | 'error' | 'warning' | 'info';
 }
 
 type ResultsState = Extract<State, { status: 'results' }>;
+type ScanningState = Extract<State, { status: 'scanning' }>;
 
-// Build the full results-view state from a completed or previously-saved scan.
-// The scan data comes from `saved`; the UI fields (tabs, search, paging, filters)
-// always start at their defaults.
-const buildResultsState = (saved: SavedScan): ResultsState => ({
-    status: 'results',
-    currentView: saved.scanModes.dashboard ? 'dashboard' : 'leaderboard',
-    scanModes: saved.scanModes,
-    currentTab: 'following',
-    searchTerm: '',
-    sortBy: 'likes',
-    sortDirection: 'desc',
-    page: 1,
-    followingLeaderboard: saved.followingLeaderboard,
-    notFollowingLeaderboard: saved.notFollowingLeaderboard,
-    totalPostsScanned: saved.totalPostsScanned,
-    totalUniqueLikers: saved.totalUniqueLikers,
-    totalLikes: saved.totalLikes,
-    followerIds: saved.followerIds,
-    followingIds: saved.followingIds,
-    followerUsers: saved.followerUsers,
-    followingUsers: saved.followingUsers,
-    likerMap: saved.likerMap,
-    mostLikedPost: saved.mostLikedPost,
-    averageLikesPerPost: saved.averageLikesPerPost,
-    posts: saved.posts,
-    hideVerified: false,
-    hiddenUsers: [],
-    followerTab: 'dont_follow_back',
-    followerSearchTerm: '',
-    followerPage: 1,
+function buildResultsState(saved: SavedScan): ResultsState {
+    const followingIds = new Set(saved.followingIds);
+    const followingLeaderboard = buildLeaderboard(
+        saved.likerMap,
+        followingIds,
+        saved.posts.length,
+        true,
+        saved.followingUsers,
+    );
+    const notFollowingLeaderboard = buildLeaderboard(
+        saved.likerMap,
+        followingIds,
+        saved.posts.length,
+        false,
+    );
+    const totalLikes = saved.posts.reduce(
+        (sum, post) => sum + post.edge_media_preview_like.count,
+        0,
+    );
+    const mostLikedPost = saved.posts.reduce<ResultsState['mostLikedPost']>((best, post) =>
+        !best || post.edge_media_preview_like.count > best.edge_media_preview_like.count ? post : best,
+    null);
+
+    return {
+        status: 'results',
+        currentView: saved.scanModes.dashboard ? 'dashboard' : 'leaderboard',
+        scanModes: saved.scanModes,
+        scannedAt: saved.timestamp,
+        ownerId: saved.ownerId,
+        postScope: saved.postScope,
+        currentTab: 'following',
+        searchTerm: '',
+        sortBy: 'likes',
+        sortDirection: 'desc',
+        page: 1,
+        followingLeaderboard,
+        notFollowingLeaderboard,
+        totalPostsScanned: saved.posts.length,
+        totalUniqueLikers: Object.keys(saved.likerMap).length,
+        totalLikes,
+        followerIds: saved.followerIds,
+        followingIds: saved.followingIds,
+        followerUsers: saved.followerUsers,
+        followingUsers: saved.followingUsers,
+        likerMap: saved.likerMap,
+        mostLikedPost,
+        averageLikesPerPost: saved.posts.length === 0 ? 0 : totalLikes / saved.posts.length,
+        posts: saved.posts,
+        hideVerified: false,
+        hiddenUsers: [],
+        followerTab: 'dont_follow_back',
+        followerSearchTerm: '',
+        followerPage: 1,
+    };
+}
+
+function scanErrorMessage(error: RequestError): string {
+    switch (error.kind) {
+        case 'auth':
+            return 'Instagram login is missing or expired. Sign in again before retrying.';
+        case 'challenge':
+            return 'Instagram stopped the scan with a challenge or checkpoint. No further requests were made.';
+        case 'rate_limit': {
+            const retryText = error.retryAt
+                ? ` Do not retry before ${new Date(error.retryAt).toLocaleTimeString()}.`
+                : '';
+            return `Instagram asked this account to slow down. No further requests were made.${retryText}`;
+        }
+        case 'timeout':
+            return 'An Instagram request timed out. The scan stopped without saving partial results.';
+        case 'bounds':
+            return `${error.message} The scan stopped without saving partial results.`;
+        case 'network':
+            return 'The Instagram request failed after one retry. Check your connection before starting again.';
+        case 'http':
+            return `${error.message} The scan stopped without saving partial results.`;
+        case 'invalid_response':
+            return `${error.message} The scan stopped because the response could not be verified.`;
+        case 'stopped':
+            return 'Scan stopped.';
+        default:
+            return assertUnreachable(error.kind);
+    }
+}
+
+const initialScanningState = (scanModes: ScanModes): ScanningState => ({
+    status: 'scanning',
+    phase: 'fetching_posts',
+    percentage: null,
+    scanModes,
+    posts: [],
+    totalPostCount: 0,
+    currentPostIndex: 0,
+    identifiedLikerCount: 0,
+    followingCount: 0,
+    followerCount: 0,
 });
 
-const App = () => {
+const App = ({ ownerId }: { readonly ownerId: string }) => {
     const [state, setState] = useState<State>({ status: 'initial' });
-    const [timings, setTimings] = useState({
-        timeBetweenPostFetches: DEFAULT_TIME_BETWEEN_POST_FETCHES,
-        timeToWaitAfterSixPostFetches: DEFAULT_TIME_TO_WAIT_AFTER_SIX_POST_FETCHES,
-        timeBetweenLikerFetches: DEFAULT_TIME_BETWEEN_LIKER_FETCHES,
-        timeToWaitAfterFiveLikerFetches: DEFAULT_TIME_TO_WAIT_AFTER_FIVE_LIKER_FETCHES,
-        timeBetweenFollowingFetches: DEFAULT_TIME_BETWEEN_FOLLOWING_FETCHES,
-        timeToWaitAfterSixFollowingFetches: DEFAULT_TIME_TO_WAIT_AFTER_SIX_FOLLOWING_FETCHES,
-        timeBetweenFollowerFetches: DEFAULT_TIME_BETWEEN_FOLLOWER_FETCHES,
-        timeToWaitAfterSixFollowerFetches: DEFAULT_TIME_TO_WAIT_AFTER_SIX_FOLLOWER_FETCHES,
-    });
     const [toast, setToast] = useState<ToastState>({ show: false, text: '' });
-    const [savedScan, setSavedScan] = useState<SavedScan | null>(null);
-
-    const scanningPausedRef = useRef(false);
+    const [savedScan, setSavedScan] = useState<SavedScan | null>(() => loadScanResults(ownerId));
     const [scanningPaused, setScanningPaused] = useState(false);
+    const [retryAt, setRetryAt] = useState<number | null>(null);
+    const scanningPausedRef = useRef(false);
+    const lastRequestAtRef = useRef<number | null>(null);
+    const controllerRef = useRef<AbortController | null>(null);
+    const runIdRef = useRef(0);
 
-    // Load saved scan on mount
-    useEffect(() => {
-        setSavedScan(loadScanResults());
-    }, []);
+    useEffect(() => () => controllerRef.current?.abort(), []);
+
+    const updateScanning = (runId: number, update: (current: ScanningState) => ScanningState) => {
+        if (runId !== runIdRef.current) {
+            return;
+        }
+        setState(current => current.status === 'scanning' ? update(current) : current);
+    };
+
+    const stopScan = () => {
+        if (!controllerRef.current) {
+            return;
+        }
+        controllerRef.current.abort();
+        controllerRef.current = null;
+        runIdRef.current++;
+        scanningPausedRef.current = false;
+        setScanningPaused(false);
+        setState({ status: 'initial' });
+        setToast({ show: true, text: 'Scan stopped. This run was not saved.', style: 'info' });
+    };
 
     const pauseScan = () => {
         scanningPausedRef.current = !scanningPausedRef.current;
         setScanningPaused(scanningPausedRef.current);
     };
 
-    const onScan = (modes: ScanModes) => {
-        setState({
-            status: 'scanning',
-            phase: 'fetching_posts',
-            percentage: 0,
-            scanModes: modes,
-            posts: [],
-            totalPostCount: 0,
-            currentPostIndex: 0,
-            likerMap: {},
-            followingCount: 0,
-            totalFollowingCount: 0,
-            followerCount: 0,
+    const onScan = (scanModes: ScanModes) => {
+        if (retryAt !== null && retryAt > Date.now()) {
+            setToast({
+                show: true,
+                text: `Wait until ${new Date(retryAt).toLocaleTimeString()} before retrying.`,
+                style: 'warning',
+            });
+            return;
+        }
+
+        controllerRef.current?.abort();
+        const controller = new AbortController();
+        controllerRef.current = controller;
+        const runId = ++runIdRef.current;
+        scanningPausedRef.current = false;
+        setScanningPaused(false);
+        setRetryAt(null);
+        setToast({ show: false, text: '' });
+        setState(initialScanningState(scanModes));
+
+        const requester = createIgRequester({
+            ownerId,
+            signal: controller.signal,
+            pauseRef: scanningPausedRef,
+            lastRequestAtRef,
+            onRetry: notice => {
+                const text = `${notice.label}: retrying once in ${Math.ceil(notice.delayMs / 1_000)} seconds.`;
+                setToast({ show: true, text, style: 'warning' });
+                globalThis.setTimeout(() => {
+                    if (runId !== runIdRef.current || controller.signal.aborted) {
+                        return;
+                    }
+                    setToast(current => current.text === text
+                        ? { show: false, text: '' }
+                        : current);
+                }, notice.delayMs);
+            },
         });
+
+        void (async () => {
+            try {
+                const { posts, postScope } = await fetchAllPosts(requester, postsList => {
+                    updateScanning(runId, current => ({
+                        ...current,
+                        posts: postsList,
+                        totalPostCount: postsList.length,
+                        percentage: null,
+                    }));
+                });
+                if (posts.length === 0) {
+                    throw new RequestError('invalid_response', 'Instagram returned no posts for this account.');
+                }
+
+                updateScanning(runId, current => ({
+                    ...current,
+                    phase: 'fetching_likes',
+                    percentage: 0,
+                    posts,
+                    totalPostCount: posts.length,
+                    currentPostIndex: 0,
+                }));
+                const likerMap = await fetchAllLikers(
+                    posts,
+                    requester,
+                    (currentPostIndex, identifiedLikerCount, percentage) => {
+                        updateScanning(runId, current => ({
+                            ...current,
+                            currentPostIndex,
+                            identifiedLikerCount,
+                            percentage,
+                        }));
+                    },
+                );
+
+                updateScanning(runId, current => ({
+                    ...current,
+                    phase: 'fetching_following',
+                    percentage: null,
+                    followingCount: 0,
+                }));
+                const following = await fetchFollowing(requester, followingCount => {
+                    updateScanning(runId, current => ({ ...current, followingCount }));
+                });
+
+                let followerIds: string[] = [];
+                let followerUsers: Record<string, LikerUserNode> = {};
+                if (scanModes.followerAnalysis) {
+                    updateScanning(runId, current => ({
+                        ...current,
+                        phase: 'fetching_followers',
+                        percentage: null,
+                        followerCount: 0,
+                    }));
+                    const followers = await fetchFollowers(requester, followerCount => {
+                        updateScanning(runId, current => ({ ...current, followerCount }));
+                    });
+                    followerIds = [...followers.ids];
+                    followerUsers = followers.users;
+                }
+
+                if (runId !== runIdRef.current || controller.signal.aborted) {
+                    return;
+                }
+
+                const completedScan: SavedScan = {
+                    schemaVersion: 2,
+                    timestamp: Date.now(),
+                    ownerId,
+                    scanModes,
+                    postScope,
+                    posts,
+                    likerMap,
+                    followerIds,
+                    followingIds: [...following.ids],
+                    followerUsers,
+                    followingUsers: following.users,
+                };
+                const saved = saveScanResults(completedScan);
+                const retainedSavedScan = saved ? completedScan : loadScanResults(ownerId);
+                setSavedScan(retainedSavedScan);
+                setState(buildResultsState(completedScan));
+                setToast(saved
+                    ? { show: true, text: 'Scan complete. Results were saved in this browser.', style: 'success' }
+                    : retainedSavedScan
+                        ? {
+                            show: true,
+                            text: 'Scan complete, but the previous saved copy could not be replaced.',
+                            style: 'warning',
+                        }
+                        : {
+                            show: true,
+                            text: 'Scan complete, but this browser could not save a local copy.',
+                            style: 'warning',
+                        });
+            } catch (error) {
+                if (runId !== runIdRef.current || controller.signal.aborted) {
+                    return;
+                }
+                const requestError = isRequestError(error)
+                    ? error
+                    : new RequestError('invalid_response', 'The scan failed unexpectedly.', { originalError: error });
+                if (requestError.kind === 'rate_limit' && requestError.retryAt) {
+                    setRetryAt(requestError.retryAt);
+                }
+                setState({ status: 'initial' });
+                setToast({ show: true, text: scanErrorMessage(requestError), style: 'error' });
+            } finally {
+                if (runId === runIdRef.current) {
+                    controllerRef.current = null;
+                    scanningPausedRef.current = false;
+                    setScanningPaused(false);
+                }
+            }
+        })();
     };
 
     const onLoadPrevious = () => {
-        const saved = loadScanResults();
+        const saved = loadScanResults(ownerId);
         if (!saved) {
-            setToast({ show: true, text: 'No saved results found.', style: 'error' });
+            setSavedScan(null);
+            setToast({ show: true, text: 'No valid saved results exist for this account.', style: 'error' });
             return;
         }
-
+        setSavedScan(saved);
         setState(buildResultsState(saved));
-
-        setToast({ show: true, text: 'Previous results loaded!', style: 'success' });
+        setToast({ show: true, text: 'Saved results loaded.', style: 'success' });
     };
 
-    const isActiveProcess = state.status === 'scanning';
-
-    // Main scanning effect
-    useEffect(() => {
-        if (state.status !== 'scanning') {
+    const onDeleteSaved = () => {
+        if (!savedScan || !confirm('Delete the saved scan from this browser?')) {
             return;
         }
+        if (!clearScanResults()) {
+            setToast({ show: true, text: 'The saved scan could not be deleted.', style: 'error' });
+            return;
+        }
+        setSavedScan(null);
+        setToast({ show: true, text: 'Saved scan deleted from this browser.', style: 'success' });
+    };
 
-        const scanModes = state.scanModes;
+    const handleViewChange = (currentView: ResultsView) => {
+        setState(current => current.status === 'results'
+            ? { ...current, currentView, searchTerm: '', page: 1, followerPage: 1, followerSearchTerm: '' }
+            : current);
+    };
 
-        const scan = async () => {
-            // Phase 1: Fetch all posts
-            const posts = await fetchAllPosts(
-                timings,
-                scanningPausedRef,
-                (postsList, percentage) => {
-                    setState(prev => {
-                        if (prev.status !== 'scanning') { return prev; }
-                        return {
-                            ...prev,
-                            phase: 'fetching_posts',
-                            posts: [...postsList],
-                            totalPostCount: postsList.length,
-                            percentage,
-                        };
-                    });
-                },
-                setToast,
-            );
-
-            if (posts.length === 0) {
-                setToast({ show: true, text: 'No posts found. Make sure you are logged in on instagram.com', style: 'error' });
-                setState({ status: 'initial' });
-                return;
-            }
-
-            // Phase 2: Fetch likers
-            setState(prev => {
-                if (prev.status !== 'scanning') { return prev; }
-                return { ...prev, phase: 'fetching_likes', percentage: 0, currentPostIndex: 0, posts: [...posts], totalPostCount: posts.length };
-            });
-
-            const likerMap = await fetchAllLikers(
-                posts,
-                timings,
-                scanningPausedRef,
-                (currentIndex, lMap, percentage) => {
-                    setState(prev => {
-                        if (prev.status !== 'scanning') { return prev; }
-                        return {
-                            ...prev,
-                            currentPostIndex: currentIndex,
-                            likerMap: lMap,
-                            percentage,
-                        };
-                    });
-                },
-                setToast,
-            );
-
-            // Phase 3: Fetch following
-            setState(prev => {
-                if (prev.status !== 'scanning') { return prev; }
-                return { ...prev, phase: 'fetching_following', percentage: 0, followingCount: 0, totalFollowingCount: 0 };
-            });
-
-            const followingResult = await fetchFollowing(
-                timings,
-                scanningPausedRef,
-                (count, percentage) => {
-                    setState(prev => {
-                        if (prev.status !== 'scanning') { return prev; }
-                        return { ...prev, followingCount: count, totalFollowingCount: count, percentage };
-                    });
-                },
-                setToast,
-            );
-
-            // Phase 4: Fetch followers (if enabled)
-            let followerIdsArray: string[] = [];
-            let followerUsersRecord: Record<string, LikerUserNode> = {};
-
-            if (scanModes.followerAnalysis) {
-                setState(prev => {
-                    if (prev.status !== 'scanning') { return prev; }
-                    return { ...prev, phase: 'fetching_followers', percentage: 0, followerCount: 0 };
-                });
-
-                const followerResult = await fetchFollowers(
-                    timings,
-                    scanningPausedRef,
-                    (count, percentage) => {
-                        setState(prev => {
-                            if (prev.status !== 'scanning') { return prev; }
-                            return { ...prev, followerCount: count, percentage };
-                        });
-                    },
-                    setToast,
-                );
-
-                followerIdsArray = Array.from(followerResult.ids);
-                followerUsersRecord = followerResult.users;
-            }
-
-            // Build results
-            const followingLeaderboard = buildLeaderboard(likerMap, followingResult.ids, posts.length, true, followingResult.users);
-            const notFollowingLeaderboard = buildLeaderboard(likerMap, followingResult.ids, posts.length, false);
-
-            const totalLikes = Object.values(likerMap).reduce((sum, a) => sum + a.likesCount, 0);
-            const sortedByLikes = [...posts].sort(
-                (a, b) => b.edge_media_preview_like.count - a.edge_media_preview_like.count,
-            );
-            const mostLikedPost = sortedByLikes[0] ?? null;
-            const averageLikesPerPost = posts.length > 0 ? totalLikes / posts.length : 0;
-
-            const followingIdsArray = Array.from(followingResult.ids);
-
-            // Save to localStorage, then derive the displayed state from the exact
-            // same data so the saved and shown views can never drift apart.
-            const savedData: SavedScan = {
-                timestamp: Date.now(),
-                scanModes,
-                totalPostsScanned: posts.length,
-                totalUniqueLikers: Object.keys(likerMap).length,
-                totalLikes,
-                followingLeaderboard,
-                notFollowingLeaderboard,
-                followerIds: followerIdsArray,
-                followingIds: followingIdsArray,
-                followerUsers: followerUsersRecord,
-                followingUsers: followingResult.users,
-                likerMap,
-                mostLikedPost,
-                averageLikesPerPost,
-                posts,
-            };
-            saveScanResults(savedData);
-            setSavedScan(savedData);
-
-            setState(buildResultsState(savedData));
-
-            setToast({ show: true, text: 'Scan complete! Results ready.', style: 'success' });
-        };
-
-        scan();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [state.status === 'scanning']);
-
-    const handleViewChange = (view: ResultsView) => {
+    const onHome = () => {
+        if (state.status === 'initial') {
+            location.reload();
+            return;
+        }
         if (state.status === 'results') {
-            setState({ ...state, currentView: view, searchTerm: '', page: 1, followerPage: 1, followerSearchTerm: '' });
+            setState({ status: 'initial' });
         }
     };
 
@@ -284,10 +375,12 @@ const App = () => {
     switch (state.status) {
         case 'initial':
             markup = (
-                <NotScanning
+                <ModeSelector
                     onScan={onScan}
                     onLoadPrevious={onLoadPrevious}
+                    onDeleteSaved={onDeleteSaved}
                     savedScan={savedScan}
+                    retryAt={retryAt}
                 />
             );
             break;
@@ -297,6 +390,7 @@ const App = () => {
                     state={state}
                     scanningPaused={scanningPaused}
                     pauseScan={pauseScan}
+                    stopScan={stopScan}
                 />
             );
             break;
@@ -310,10 +404,9 @@ const App = () => {
                     case 'follower_analysis':
                         return <FollowerAnalysis state={state} setState={setState} />;
                     default:
-                        return <Leaderboard state={state} setState={setState} />;
+                        return assertUnreachable(state.currentView);
                 }
             })();
-
             markup = (
                 <>
                     <ResultsNav
@@ -321,23 +414,29 @@ const App = () => {
                         scanModes={state.scanModes}
                         onViewChange={handleViewChange}
                     />
+                    <aside className='results-notice'>
+                        <strong>{state.postScope === 'recent_limit'
+                            ? `Recent-post limit reached (${state.totalPostsScanned} posts).`
+                            : `${state.totalPostsScanned} posts returned by the feed endpoint scanned.`}</strong>
+                        {' '}Like totals use each post&apos;s displayed count. Leaderboards include only identities returned by
+                        Instagram&apos;s liker endpoint, which may be incomplete. Results belong to account ID {state.ownerId}.
+                    </aside>
                     {resultsContent}
                 </>
             );
             break;
         }
         default:
-            assertUnreachable(state);
+            markup = assertUnreachable(state);
     }
 
     return (
         <div className='ill with-app-header'>
             <Toolbar
-                isActiveProcess={isActiveProcess}
                 state={state}
-                setState={setState}
-                currentTimings={timings}
-                setTimings={setTimings}
+                hasSavedScan={savedScan !== null}
+                onHome={onHome}
+                onDeleteSaved={onDeleteSaved}
             />
             {markup}
             <Toast
@@ -350,14 +449,11 @@ const App = () => {
     );
 };
 
-// Check hostname and render
-if (location.hostname !== INSTAGRAM_HOSTNAME) {
-    alert('Please run this script on Instagram (www.instagram.com)');
-} else {
+export function mountApp(ownerId: string): void {
     document.title = 'Instagram Likes Leaderboard';
-    document.body.innerHTML = '';
+    document.body.replaceChildren();
     const appContainer = document.createElement('div');
     appContainer.id = 'ill-root';
     document.body.appendChild(appContainer);
-    render(<App />, appContainer);
+    render(<App ownerId={ownerId} />, appContainer);
 }

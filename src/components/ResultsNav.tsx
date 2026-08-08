@@ -22,13 +22,14 @@ export const ResultsNav = ({ currentView, scanModes, onViewChange }: ResultsNavP
     }
 
     return (
-        <nav className='results-nav'>
+        <nav className='results-nav' aria-label='Result views'>
             {enabledViews.map(v => (
                 <button
                     type='button'
                     key={v.key}
                     className={`results-nav-item ${currentView === v.key ? 'results-nav-active' : ''}`}
                     onClick={() => onViewChange(v.key)}
+                    aria-current={currentView === v.key ? 'page' : undefined}
                 >
                     {v.label}
                 </button>
