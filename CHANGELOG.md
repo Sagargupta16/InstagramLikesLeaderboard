@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.1] - 2026-08-08
+
+### Fixed
+
+- Completed valid post collection at the six-page safety bound as a labeled recent scope instead of aborting the entire scan
+
 ## [2.1.0] - 2026-08-08
 
 ### Added

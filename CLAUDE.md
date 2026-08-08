@@ -9,7 +9,7 @@
 
 ## What This Is
 
-Instagram Likes Leaderboard 2.1.0 is a browser-console Preact application. Users copy one generated bundle into the console on `www.instagram.com`; it replaces the page with a local UI and calls Instagram's private v1 web endpoints using the existing browser session. There is no backend.
+Instagram Likes Leaderboard 2.1.1 is a browser-console Preact application. Users copy one generated bundle into the console on `www.instagram.com`; it replaces the page with a local UI and calls Instagram's private v1 web endpoints using the existing browser session. There is no backend.
 
 Preserve the Preact/TypeScript/Webpack/SCSS architecture, npm/package-lock, ES2020 target, and single embedded production bundle. Do not add live Instagram calls to tests or CI.
 
@@ -39,7 +39,7 @@ No implementation can guarantee avoiding Instagram throttling or account enforce
 
 ## Scan and Data Contract
 
-`src/utils/scanner.ts` performs posts, likers, following, and optional followers in order. Every required request must succeed; do not catch errors to continue with partial data. Keep cursor/page/post bounds and ID deduplication. Do not add liker pagination without documented, reviewed endpoint behavior.
+`src/utils/scanner.ts` performs posts, likers, following, and optional followers in order. Every required request must succeed; do not catch errors to continue with partial data. Keep cursor/page/post bounds and ID deduplication. Reaching a post/page collection bound returns a labeled `recent_limit`; malformed or repeated pagination remains fatal. Do not add liker pagination without documented, reviewed endpoint behavior.
 
 Displayed post-like totals come from post records. Leaderboard counts use only identities returned by the liker endpoint and can be incomplete.
 
