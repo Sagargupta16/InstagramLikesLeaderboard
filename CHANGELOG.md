@@ -8,7 +8,7 @@
 - Explicit Stop control, rate-limit retry lock, owner/scope result notice, and saved-data deletion
 - Runtime-validated, owner-scoped local storage schema v2 with derived results rebuilt on load
 - Focused mocked tests for request behavior, bounded scanning, storage validation, defaults, and deterministic bundle embedding
-- Pull-request CI and automated GitHub Pages deployment using Node 24, `npm ci`, least-privilege permissions, and immutable action SHAs
+- Pull-request CI and automated GitHub Pages deployment using Node 24, script-disabled clean installs, least-privilege permissions, and immutable action SHAs
 - Repository governance, dependency automation, badges, cross-links, and development guidance accumulated since 2.0.0
 
 ### Changed
