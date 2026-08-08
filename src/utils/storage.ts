@@ -1,14 +1,20 @@
-import { LikerAccumulator, LikerUserNode } from '../model/user';
+import { LikerAccumulator, LikerUserNode, UserListScope } from '../model/user';
 import { PostNode, PostScope } from '../model/post';
-import { LOCAL_STORAGE_KEY, REQUEST_POLICY } from '../constants/constants';
+import {
+    LOCAL_STORAGE_KEY,
+    REQUEST_POLICY,
+    SAVED_SCAN_CACHE_TTL_MS,
+} from '../constants/constants';
 import { ScanModes } from '../model/scan-modes';
 
 export interface SavedScan {
-    readonly schemaVersion: 2;
+    readonly schemaVersion: 3;
     readonly timestamp: number;
     readonly ownerId: string;
     readonly scanModes: ScanModes;
     readonly postScope: PostScope;
+    readonly followingScope: UserListScope;
+    readonly followerScope: UserListScope | null;
     readonly posts: readonly PostNode[];
     readonly likerMap: Readonly<Record<string, LikerAccumulator>>;
     readonly followerIds: readonly string[];
@@ -101,15 +107,21 @@ function isScanModes(value: unknown): value is ScanModes {
         && typeof value.followerAnalysis === 'boolean';
 }
 
+function isUserListScope(value: unknown): value is UserListScope {
+    return value === 'endpoint_complete' || value === 'page_limit';
+}
+
 export function isSavedScan(value: unknown, ownerId: string): value is SavedScan {
     if (!isRecord(value)
-        || value.schemaVersion !== 2
+        || value.schemaVersion !== 3
         || value.ownerId !== ownerId
         || typeof value.timestamp !== 'number'
         || !Number.isFinite(value.timestamp)
         || value.timestamp <= 0
         || !isScanModes(value.scanModes)
         || (value.postScope !== 'all_posts' && value.postScope !== 'recent_limit')
+        || !isUserListScope(value.followingScope)
+        || (value.followerScope !== null && !isUserListScope(value.followerScope))
         || !Array.isArray(value.posts)
         || value.posts.length === 0
         || value.posts.length > REQUEST_POLICY.maxPosts
@@ -126,6 +138,7 @@ export function isSavedScan(value: unknown, ownerId: string): value is SavedScan
     const saved = value as unknown as SavedScan;
     return hasExactUserKeys(saved.followerIds, saved.followerUsers)
         && hasExactUserKeys(saved.followingIds, saved.followingUsers)
+        && saved.scanModes.followerAnalysis === (saved.followerScope !== null)
         && (saved.scanModes.followerAnalysis || saved.followerIds.length === 0);
 }
 
@@ -155,6 +168,28 @@ export function loadScanResults(ownerId: string, storage?: StorageLike): SavedSc
         console.warn('Failed to load scan results from localStorage:', error);
         return null;
     }
+}
+
+export function isReusableScan(
+    saved: SavedScan,
+    requestedModes: ScanModes,
+    now = Date.now(),
+): boolean {
+    const age = now - saved.timestamp;
+    return age >= 0
+        && age < SAVED_SCAN_CACHE_TTL_MS
+        && (!requestedModes.followerAnalysis
+            || (saved.scanModes.followerAnalysis && saved.followerScope !== null));
+}
+
+export function loadReusableScan(
+    ownerId: string,
+    requestedModes: ScanModes,
+    storage?: StorageLike,
+    now = Date.now(),
+): SavedScan | null {
+    const saved = loadScanResults(ownerId, storage);
+    return saved && isReusableScan(saved, requestedModes, now) ? saved : null;
 }
 
 export function clearScanResults(storage?: StorageLike): boolean {

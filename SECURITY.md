@@ -10,8 +10,10 @@ The landing page and injected application have no project-operated backend. The 
 
 - Uses the signed-in browser's Instagram cookies to make requests directly to Instagram
 - Does not read, copy, or persist session cookies as result data
-- Stores only a completed schema-v2 scan in Instagram's local storage
+- Stores only a completed schema-v3 scan in Instagram's local storage
 - Validates saved data at runtime and loads it only for the captured Instagram account ID
+- Reuses a compatible snapshot for up to 24 hours before creating a requester, so cached loads send no Instagram traffic
+- Never persists or resumes opaque pagination cursors; expired caches are replaced only after a new complete or bounded scan
 - Provides a control to delete the saved local copy
 - Loads no analytics, external fonts, or third-party scripts from the landing page
 
@@ -21,9 +23,9 @@ The generated bundle is embedded in `public/index.html` and can be audited again
 
 This project uses private, undocumented Instagram web endpoints. No implementation or delay can guarantee avoiding throttling, checkpoints, temporary restrictions, or enforcement.
 
-Version 2.1.1 uses one sequential requester with fixed 2–3 second gaps, a 20-second timeout, a 250-request/15-minute run limit, a 150-post limit, and bounded pagination. It retries only a network failure or HTTP 408/500/502/503/504, at most once. It does not retry authentication failures, challenge/checkpoint responses, rate limits, timeouts, malformed responses, or user cancellation.
+Version 2.2.0 uses one sequential requester with fixed 2–3 second gaps, a 20-second timeout, a 250-request/15-minute run limit, a 150-post limit, and bounded pagination. It retries only a network failure or HTTP 408/500/502/503/504, at most once. It does not retry authentication failures, challenge/checkpoint responses, rate limits, timeouts, malformed responses, or user cancellation.
 
-Reaching a configured post collection bound produces a labeled limited recent scope and still requires every later request to succeed. Any required-request failure stops the run; failed scans are not displayed or persisted. Stop aborts delay and in-flight work; Pause only prevents the next request.
+Reaching a configured post or relationship-list collection bound produces a labeled limited scope and still requires every later request to succeed. Malformed or repeated cursors and any required-request failure stop the run; failed scans are not displayed or persisted. Stop aborts delay and in-flight work; Pause only prevents the next request.
 
 ## Dependency and CI Policy
 
