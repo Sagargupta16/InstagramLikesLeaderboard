@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.2.1] - 2026-08-08
+
+### Changed
+
+- Restored cursor-to-terminal post, following, and follower traversal while preserving the 150-post and global request/time safety bounds
+
+### Fixed
+
+- Removed the six-page and 40-page ceilings that truncated observed scans at 72 posts and 960 relationship accounts
+- Excluded bounded 2.2.0 snapshots from automatic 24-hour reuse while preserving reusable endpoint-complete and genuine 150-post snapshots
+
 ## [2.2.0] - 2026-08-08
 
 ### Added

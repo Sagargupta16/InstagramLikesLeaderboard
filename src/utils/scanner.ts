@@ -89,7 +89,7 @@ export async function fetchAllPosts(
     const cursors = new Set<string>();
     let cursor: string | undefined;
 
-    for (let page = 1; page <= requester.policy.maxPostPages; page++) {
+    for (;;) {
         const data = asRecord(
             await requester.request<unknown>(userMediaUrlGenerator(requester.ownerId, cursor), 'Posts'),
             'post list',
@@ -132,14 +132,9 @@ export async function fetchAllPosts(
         if (cursors.has(nextCursor)) {
             throw new RequestError('bounds', 'Instagram repeated a post cursor before the scan completed.');
         }
-        if (page >= requester.policy.maxPostPages) {
-            return { posts, postScope: 'recent_limit' };
-        }
         cursors.add(nextCursor);
         cursor = nextCursor;
     }
-
-    throw new RequestError('bounds', 'The post scan ended unexpectedly.');
 }
 
 export async function fetchAllLikers(
@@ -196,7 +191,7 @@ async function fetchUserList(
     const cursors = new Set<string>();
     let cursor: string | undefined;
 
-    for (let page = 1; page <= requester.policy.maxUserListPages; page++) {
+    for (;;) {
         const data = asRecord(
             await requester.request<unknown>(urlGenerator(requester.ownerId, cursor), label),
             `${label.toLowerCase()} list`,
@@ -219,14 +214,9 @@ async function fetchUserList(
         if (cursors.has(nextCursor)) {
             throw new RequestError('bounds', `Instagram repeated the ${label.toLowerCase()} cursor.`);
         }
-        if (page >= requester.policy.maxUserListPages) {
-            return { ids, users, scope: 'page_limit' };
-        }
         cursors.add(nextCursor);
         cursor = nextCursor;
     }
-
-    throw new RequestError('bounds', `The ${label.toLowerCase()} scan ended unexpectedly.`);
 }
 
 export function fetchFollowing(
