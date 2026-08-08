@@ -2,7 +2,7 @@ import { LeaderboardEntry } from './leaderboard-entry';
 import { LeaderboardTab } from './leaderboard-tab';
 import { SortField } from './sort-field';
 import { PostNode, PostScope } from './post';
-import { LikerAccumulator, LikerUserNode } from './user';
+import { LikerAccumulator, LikerUserNode, UserListScope } from './user';
 import { ResultsView } from './results-view';
 import { FollowerTab } from './follower-tab';
 import { ScanModes } from './scan-modes';
@@ -29,6 +29,8 @@ interface ResultsState {
     readonly scannedAt: number;
     readonly ownerId: string;
     readonly postScope: PostScope;
+    readonly followingScope: UserListScope;
+    readonly followerScope: UserListScope | null;
     readonly currentTab: LeaderboardTab;
     readonly searchTerm: string;
     readonly sortBy: SortField;

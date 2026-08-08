@@ -1,5 +1,5 @@
 import { PostNode, PostScope } from '../model/post';
-import { LikerAccumulator, LikerUserNode } from '../model/user';
+import { LikerAccumulator, LikerUserNode, UserListScope } from '../model/user';
 import {
     IgRequester,
     RequestError,
@@ -17,6 +17,7 @@ export interface PostsResult {
 export interface FetchUsersResult {
     readonly ids: Set<string>;
     readonly users: Record<string, LikerUserNode>;
+    readonly scope: UserListScope;
 }
 
 function asRecord(value: unknown, context: string): Record<string, unknown> {
@@ -213,13 +214,13 @@ async function fetchUserList(
 
         const nextCursor = parseCursor(data.next_max_id, label.toLowerCase());
         if (nextCursor === null) {
-            return { ids, users };
+            return { ids, users, scope: 'endpoint_complete' };
         }
         if (cursors.has(nextCursor)) {
             throw new RequestError('bounds', `Instagram repeated the ${label.toLowerCase()} cursor.`);
         }
         if (page >= requester.policy.maxUserListPages) {
-            throw new RequestError('bounds', `The ${label.toLowerCase()} scan reached its page limit.`);
+            return { ids, users, scope: 'page_limit' };
         }
         cursors.add(nextCursor);
         cursor = nextCursor;

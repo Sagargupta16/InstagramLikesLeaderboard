@@ -3,7 +3,7 @@ import { render } from 'react-dom';
 import './styles/styles.scss';
 
 import { State } from './model/state';
-import { LikerUserNode } from './model/user';
+import { LikerUserNode, UserListScope } from './model/user';
 import { ScanModes } from './model/scan-modes';
 import { ResultsView } from './model/results-view';
 import {
@@ -17,6 +17,8 @@ import { fetchAllPosts, fetchAllLikers, fetchFollowing, fetchFollowers } from '.
 import {
     SavedScan,
     clearScanResults,
+    formatTimeSince,
+    loadReusableScan,
     loadScanResults,
     saveScanResults,
 } from './utils/storage';
@@ -69,6 +71,8 @@ function buildResultsState(saved: SavedScan): ResultsState {
         scannedAt: saved.timestamp,
         ownerId: saved.ownerId,
         postScope: saved.postScope,
+        followingScope: saved.followingScope,
+        followerScope: saved.followerScope,
         currentTab: 'following',
         searchTerm: '',
         sortBy: 'likes',
@@ -176,6 +180,27 @@ const App = ({ ownerId }: { readonly ownerId: string }) => {
     };
 
     const onScan = (scanModes: ScanModes) => {
+        const cached = loadReusableScan(ownerId, scanModes);
+        if (cached) {
+            const cachedResult: SavedScan = scanModes.followerAnalysis
+                ? { ...cached, scanModes }
+                : {
+                    ...cached,
+                    scanModes,
+                    followerScope: null,
+                    followerIds: [],
+                    followerUsers: {},
+                };
+            setSavedScan(cached);
+            setState(buildResultsState(cachedResult));
+            setToast({
+                show: true,
+                text: `Loaded saved results from ${formatTimeSince(cached.timestamp)}. Instagram was not contacted.`,
+                style: 'success',
+            });
+            return;
+        }
+
         if (retryAt !== null && retryAt > Date.now()) {
             setToast({
                 show: true,
@@ -261,6 +286,7 @@ const App = ({ ownerId }: { readonly ownerId: string }) => {
 
                 let followerIds: string[] = [];
                 let followerUsers: Record<string, LikerUserNode> = {};
+                let followerScope: UserListScope | null = null;
                 if (scanModes.followerAnalysis) {
                     updateScanning(runId, current => ({
                         ...current,
@@ -273,6 +299,7 @@ const App = ({ ownerId }: { readonly ownerId: string }) => {
                     });
                     followerIds = [...followers.ids];
                     followerUsers = followers.users;
+                    followerScope = followers.scope;
                 }
 
                 if (runId !== runIdRef.current || controller.signal.aborted) {
@@ -280,11 +307,13 @@ const App = ({ ownerId }: { readonly ownerId: string }) => {
                 }
 
                 const completedScan: SavedScan = {
-                    schemaVersion: 2,
+                    schemaVersion: 3,
                     timestamp: Date.now(),
                     ownerId,
                     scanModes,
                     postScope,
+                    followingScope: following.scope,
+                    followerScope,
                     posts,
                     likerMap,
                     followerIds,
@@ -418,8 +447,16 @@ const App = ({ ownerId }: { readonly ownerId: string }) => {
                         <strong>{state.postScope === 'recent_limit'
                             ? `Recent-post limit reached (${state.totalPostsScanned} posts).`
                             : `${state.totalPostsScanned} posts returned by the feed endpoint scanned.`}</strong>
+                        {state.followingScope === 'page_limit' && (
+                            <>{' '}<strong>Following page limit reached ({state.followingIds.length} accounts returned).</strong></>
+                        )}
+                        {state.followerScope === 'page_limit' && (
+                            <>{' '}<strong>Follower page limit reached ({state.followerIds.length} accounts returned).</strong></>
+                        )}
                         {' '}Like totals use each post&apos;s displayed count. Leaderboards include only identities returned by
                         Instagram&apos;s liker endpoint, which may be incomplete. Results belong to account ID {state.ownerId}.
+                        {(state.followingScope === 'page_limit' || state.followerScope === 'page_limit')
+                            && ' Accounts absent from bounded relationship pages are unknown, not confirmed non-relationships.'}
                     </aside>
                     {resultsContent}
                 </>

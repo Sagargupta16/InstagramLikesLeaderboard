@@ -22,6 +22,8 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
         followerTab,
         followerSearchTerm,
         followerPage,
+        followingScope,
+        followerScope,
     } = state;
 
     const categories = useMemo(() => {
@@ -85,8 +87,16 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
     };
 
     const tabs: Array<{ key: FollowerTab; label: string; count: number }> = [
-        { key: 'dont_follow_back', label: "They Don't Follow Back", count: categories.dontFollowBack.length },
-        { key: 'not_following_back', label: "You Don't Follow Back", count: categories.notFollowingBack.length },
+        {
+            key: 'dont_follow_back',
+            label: followerScope === 'page_limit' ? 'No match in returned follower pages' : "They Don't Follow Back",
+            count: categories.dontFollowBack.length,
+        },
+        {
+            key: 'not_following_back',
+            label: followingScope === 'page_limit' ? 'No match in returned following pages' : "You Don't Follow Back",
+            count: categories.notFollowingBack.length,
+        },
         { key: 'mutual', label: 'Mutual', count: categories.mutual.length },
         { key: 'ghost', label: 'No Identified Likes', count: categories.ghost.length },
     ];
@@ -95,8 +105,8 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
         <section className='flex'>
             <aside className='app-sidebar'>
                 <div className='sidebar-stats'>
-                    <p>Followers: {followerIds.length}</p>
-                    <p>Following: {followingIds.length}</p>
+                    <p>Followers returned: {followerIds.length}</p>
+                    <p>Following returned: {followingIds.length}</p>
                     <p>Mutual: {categories.mutual.length}</p>
                 </div>
 

@@ -38,4 +38,5 @@ export const REQUEST_POLICY: Readonly<RequestPolicy> = {
 };
 
 export const LOCAL_STORAGE_KEY = 'ill_scan_results';
+export const SAVED_SCAN_CACHE_TTL_MS = 24 * 60 * 60 * 1_000;
 export const CAPTION_PREVIEW_LENGTH = 150;

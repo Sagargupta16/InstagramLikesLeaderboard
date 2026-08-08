@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScanModes, DEFAULT_SCAN_MODES } from '../model/scan-modes';
-import { SavedScan, formatTimeSince } from '../utils/storage';
+import { SAVED_SCAN_CACHE_TTL_MS } from '../constants/constants';
+import { SavedScan, formatTimeSince, isReusableScan } from '../utils/storage';
 
 interface ModeSelectorProps {
     readonly onScan: (modes: ScanModes) => void;
@@ -31,7 +32,21 @@ export const ModeSelector = ({
         return () => window.clearTimeout(timer);
     }, [retryAt]);
 
+    useEffect(() => {
+        if (!savedScan) {
+            return undefined;
+        }
+        const currentTime = Date.now();
+        const expiresIn = savedScan.timestamp + SAVED_SCAN_CACHE_TTL_MS - currentTime;
+        if (savedScan.timestamp > currentTime || expiresIn <= 0) {
+            return undefined;
+        }
+        const timer = window.setTimeout(() => setNow(Date.now()), expiresIn);
+        return () => window.clearTimeout(timer);
+    }, [savedScan]);
+
     const retryBlocked = retryAt !== null && retryAt > now;
+    const reusableSavedScan = savedScan !== null && isReusableScan(savedScan, modes, now);
 
     return (
         <main className='mode-selector'>
@@ -67,11 +82,13 @@ export const ModeSelector = ({
             <p className='scan-safety-note'>
                 Requests are sequential and use fixed conservative pacing. This reduces pressure but cannot guarantee
                 avoiding throttling, checkpoints, temporary restrictions, or enforcement.
+                A compatible completed scan is reused for 24 hours without Instagram requests. Delete the saved copy
+                to refresh sooner.
             </p>
 
             {retryBlocked && (
                 <p className='retry-lock' role='status'>
-                    Instagram requested a cooldown. Start is locked until {new Date(retryAt).toLocaleTimeString()}.
+                    Instagram requested a cooldown. New requests are locked until {new Date(retryAt).toLocaleTimeString()}.
                 </p>
             )}
 
@@ -79,7 +96,7 @@ export const ModeSelector = ({
                 type='button'
                 className='run-scan-btn'
                 onClick={() => onScan(modes)}
-                disabled={retryBlocked}
+                disabled={retryBlocked && !reusableSavedScan}
             >
                 Start scan
             </button>

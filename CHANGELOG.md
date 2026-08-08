@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.2.0] - 2026-08-08
+
+### Added
+
+- Reused compatible same-account scans completed within 24 hours before creating an Instagram requester or sending any request
+
+### Changed
+
+- Persisted explicit following and follower completeness scopes in runtime-validated local storage schema v3
+- Qualified negative relationship categories when a relationship list is bounded so missing accounts are not presented as confirmed non-relationships
+
+### Fixed
+
+- Completed valid following and follower collection at the 40-page safety bound instead of aborting the entire scan
+
 ## [2.1.1] - 2026-08-08
 
 ### Fixed

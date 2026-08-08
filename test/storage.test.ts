@@ -33,11 +33,13 @@ const user = {
 };
 
 const savedScan: SavedScan = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     timestamp: 1,
     ownerId: 'owner-1',
     scanModes: DEFAULT_SCAN_MODES,
     postScope: 'all_posts',
+    followingScope: 'endpoint_complete',
+    followerScope: null,
     posts: [{
         id: 'post-1',
         edge_media_preview_like: { count: 8 },
@@ -50,7 +52,7 @@ const savedScan: SavedScan = {
     followingUsers: { 'user-1': user },
 };
 
-test('storage round-trips a valid owner-scoped schema-v2 scan', () => {
+test('storage round-trips a valid owner-scoped schema-v3 scan', () => {
     const storage = new MemoryStorage();
     assert.equal(saveScanResults(savedScan, storage), true);
     assert.deepEqual(loadScanResults('owner-1', storage), savedScan);
@@ -59,7 +61,7 @@ test('storage round-trips a valid owner-scoped schema-v2 scan', () => {
 
 test('storage rejects malformed and legacy data', () => {
     const storage = new MemoryStorage();
-    storage.setItem('ill_scan_results', JSON.stringify({ ...savedScan, schemaVersion: 1 }));
+    storage.setItem('ill_scan_results', JSON.stringify({ ...savedScan, schemaVersion: 2 }));
     assert.equal(loadScanResults('owner-1', storage), null);
 
     storage.setItem('ill_scan_results', JSON.stringify({

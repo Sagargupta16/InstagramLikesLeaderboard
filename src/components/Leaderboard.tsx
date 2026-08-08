@@ -94,7 +94,15 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
         sortDirection,
         searchTerm,
         page,
+        followingScope,
     } = state;
+
+    const notFollowingLabel = followingScope === 'page_limit'
+        ? 'Not in returned following pages'
+        : 'You do not follow';
+    const exportCategory = currentTab === 'not_following' && followingScope === 'page_limit'
+        ? 'no-following-match'
+        : currentTab;
 
     const visibleEntries = useMemo(() => {
         const source = currentTab === 'following'
@@ -168,7 +176,7 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
                     <p>Identified likers: {state.totalUniqueLikers}</p>
                     <p>Displayed post likes: {state.totalLikes.toLocaleString()}</p>
                     <p>You follow: {followingLeaderboard.length}</p>
-                    <p>You do not follow: {notFollowingLeaderboard.length}</p>
+                    <p>{notFollowingLabel}: {notFollowingLeaderboard.length}</p>
                 </div>
 
                 <label className='sidebar-search'>
@@ -271,7 +279,7 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
                     type='button'
                     className='export-btn'
                     disabled={filteredEntries.length === 0}
-                    onClick={() => exportAsCsv(filteredEntries, `likes-leaderboard-${currentTab}.csv`)}
+                    onClick={() => exportAsCsv(filteredEntries, `likes-leaderboard-${exportCategory}.csv`)}
                 >
                     Export CSV
                 </button>
@@ -279,7 +287,7 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
                     type='button'
                     className='export-btn'
                     disabled={filteredEntries.length === 0}
-                    onClick={() => exportAsJson(filteredEntries, `likes-leaderboard-${currentTab}.json`)}
+                    onClick={() => exportAsJson(filteredEntries, `likes-leaderboard-${exportCategory}.json`)}
                 >
                     Export JSON
                 </button>
@@ -301,7 +309,7 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
                         onClick={() => switchTab('not_following')}
                         aria-pressed={currentTab === 'not_following'}
                     >
-                        You do not follow ({notFollowingLeaderboard.length})
+                        {notFollowingLabel} ({notFollowingLeaderboard.length})
                     </button>
                 </div>
 

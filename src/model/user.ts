@@ -1,3 +1,5 @@
+export type UserListScope = 'endpoint_complete' | 'page_limit';
+
 // User node returned from the "likers of a post" endpoint
 export interface LikerUserNode {
     readonly id: string;

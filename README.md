@@ -1,6 +1,6 @@
 # Instagram Likes Leaderboard
 
-![Version](https://img.shields.io/badge/version-2.1.1-5eead4?style=flat-square)
+![Version](https://img.shields.io/badge/version-2.2.0-5eead4?style=flat-square)
 ![GitHub stars](https://img.shields.io/github/stars/Sagargupta16/InstagramLikesLeaderboard?style=flat-square&cacheSeconds=86400)
 ![GitHub forks](https://img.shields.io/github/forks/Sagargupta16/InstagramLikesLeaderboard?style=flat-square&cacheSeconds=86400)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -22,7 +22,7 @@ A browser-console tool that builds a leaderboard from the liker identities Insta
 5. Choose the optional views you need, then select **Start scan**.
 6. Keep the tab open until the scan completes. Use **Pause** to prevent the next request or **Stop** to abort the run.
 
-Follower comparison is off by default because it adds requests for your followers list. A scan always reads posts, returned liker identities, and the following list so it can separate people you follow from people you do not.
+Follower comparison is off by default because it adds requests for your followers list. A scan always reads posts, returned liker identities, and the following list so it can separate people you follow from people you do not. A compatible completed scan for the same account is reused for 24 hours without contacting Instagram; delete the saved copy to refresh sooner.
 
 ## Understand the Results
 
@@ -32,6 +32,7 @@ Instagram's endpoints do not provide one complete, documented dataset. The UI an
 - **Identified likes:** liker identities returned by the per-post liker endpoint. Leaderboard counts and participation percentages use these identities.
 - **No identified likes:** no identity was returned for that account in the scanned posts; this does not prove that the account never liked a post.
 - **Recent-post limit:** at most 150 unique posts or six post pages are scanned. Results state when either bound was reached.
+- **Relationship-list limit:** at most 40 following pages and, when enabled, 40 follower pages are scanned. A reached bound is labeled, and absence from those returned pages is treated as unknown rather than proof of a non-relationship.
 
 The liker endpoint is not paginated by this tool because its continuation behavior is undocumented and additional calls increase account risk. Consequently, identified-like totals can be lower than displayed post-like totals.
 
@@ -50,7 +51,7 @@ Every run uses one sequential requester. Users cannot lower its timing:
 | Post scope | 150 posts or 6 post pages; the first reached bound completes collection |
 | Follower/following scope | 40 pages per enabled list |
 
-Reaching either post bound completes with a clearly labeled limited recent scope. A repeated/malformed cursor, unexpected response, missing login, timeout, Stop action, or exhausted request/time/user-list bound ends the entire run. Failed scans are never shown or saved. A 429/feedback response also locks the Start action until the provided or conservative fallback retry time.
+Reaching a post or relationship-list bound completes with a clearly labeled limited scope. A repeated/malformed cursor, unexpected response, missing login, timeout, Stop action, or exhausted request/time bound ends the entire run. Failed scans are never shown or saved. A 429/feedback response locks new Instagram requests until the provided or conservative fallback retry time; a compatible cached scan can still load.
 
 ## Privacy and Saved Data
 
@@ -58,14 +59,17 @@ Reaching either post bound completes with a clearly labeled limited recent scope
 - The injected app sends requests directly from your browser to Instagram using your existing session. There is no project-operated API or data-collection server.
 - Credentials and session cookies are not copied into saved results.
 - A completed scan is saved under `ill_scan_results` in Instagram's local storage.
-- Schema-v2 saved data is validated at runtime and scoped to the captured Instagram account ID. Data from another account or an older schema is not loaded.
-- Use **Delete saved copy** to remove the local result. Clearing Instagram site data also removes it.
+- Schema-v3 saved data is validated at runtime and scoped to the captured Instagram account ID. Data from another account or an older schema is not loaded.
+- Selecting Start reuses a compatible snapshot completed less than 24 hours ago before any requester is created. Follower comparison is reused only when the snapshot includes follower data.
+- The 24-hour limit applies to automatic reuse. **Load saved scan** can still open an older valid snapshot.
+- Opaque relationship cursors are never persisted, resumed, or merged. After cache expiry, a fresh full or bounded traversal atomically replaces the snapshot.
+- Use **Delete saved copy** to remove the local result or force an earlier refresh. Clearing Instagram site data also removes it.
 
 ## Views
 
-- **Leaderboard:** returned liker identities split into accounts you follow and do not follow, with local search, filters, sort, pagination, and CSV/JSON exports.
+- **Leaderboard:** returned liker identities split into accounts positively matched in the returned following pages and accounts without a match, with local search, filters, sort, pagination, and CSV/JSON exports. A complete following list retains the usual follow/non-follow labels.
 - **Dashboard:** posts scanned, displayed post likes, average displayed likes, identified likers, highest displayed like count, and top identified likers you follow.
-- **Follower comparison (optional):** accounts that do not follow you back, accounts you do not follow back, mutuals, and followers with no identified likes in the scanned scope.
+- **Follower comparison (optional):** accounts that do not follow you back, accounts you do not follow back, mutuals, and followers with no identified likes in the scanned scope. When a relationship list is bounded, negative categories are relabeled as unmatched in returned pages.
 
 ## Development
 
