@@ -132,7 +132,7 @@ export async function fetchAllPosts(
             throw new RequestError('bounds', 'Instagram repeated a post cursor before the scan completed.');
         }
         if (page >= requester.policy.maxPostPages) {
-            throw new RequestError('bounds', 'The post scan reached its page limit before completion.');
+            return { posts, postScope: 'recent_limit' };
         }
         cursors.add(nextCursor);
         cursor = nextCursor;

@@ -1,6 +1,6 @@
 # Instagram Likes Leaderboard
 
-![Version](https://img.shields.io/badge/version-2.1.0-5eead4?style=flat-square)
+![Version](https://img.shields.io/badge/version-2.1.1-5eead4?style=flat-square)
 ![GitHub stars](https://img.shields.io/github/stars/Sagargupta16/InstagramLikesLeaderboard?style=flat-square&cacheSeconds=86400)
 ![GitHub forks](https://img.shields.io/github/forks/Sagargupta16/InstagramLikesLeaderboard?style=flat-square&cacheSeconds=86400)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -31,7 +31,7 @@ Instagram's endpoints do not provide one complete, documented dataset. The UI an
 - **Displayed post likes:** the like count attached to each returned post. Dashboard totals and averages use these counts.
 - **Identified likes:** liker identities returned by the per-post liker endpoint. Leaderboard counts and participation percentages use these identities.
 - **No identified likes:** no identity was returned for that account in the scanned posts; this does not prove that the account never liked a post.
-- **Recent-post limit:** at most 150 unique posts are scanned. Results state when that limit was reached.
+- **Recent-post limit:** at most 150 unique posts or six post pages are scanned. Results state when either bound was reached.
 
 The liker endpoint is not paginated by this tool because its continuation behavior is undocumented and additional calls increase account risk. Consequently, identified-like totals can be lower than displayed post-like totals.
 
@@ -47,10 +47,10 @@ Every run uses one sequential requester. Users cannot lower its timing:
 | Retry delay | 5 seconds, or a server delay capped at 60 seconds |
 | Auth/challenge/rate limit | No retry; the run stops immediately |
 | Maximum run | 250 requests or 15 minutes |
-| Post scope | 150 posts and 6 post pages |
+| Post scope | 150 posts or 6 post pages; the first reached bound completes collection |
 | Follower/following scope | 40 pages per enabled list |
 
-A repeated/malformed cursor, unexpected response, missing login, timeout, Stop action, or exhausted bound ends the entire run. Partial scans are never shown or saved. A 429/feedback response also locks the Start action until the provided or conservative fallback retry time.
+Reaching either post bound completes with a clearly labeled limited recent scope. A repeated/malformed cursor, unexpected response, missing login, timeout, Stop action, or exhausted request/time/user-list bound ends the entire run. Failed scans are never shown or saved. A 429/feedback response also locks the Start action until the provided or conservative fallback retry time.
 
 ## Privacy and Saved Data
 
