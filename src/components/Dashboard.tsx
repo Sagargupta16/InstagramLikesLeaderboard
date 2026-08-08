@@ -4,142 +4,99 @@ import { TrophyIcon } from './icons/TrophyIcon';
 import { CAPTION_PREVIEW_LENGTH } from '../constants/constants';
 
 interface DashboardProps {
-    state: State;
+    readonly state: Extract<State, { status: 'results' }>;
 }
 
 export const Dashboard = ({ state }: DashboardProps) => {
-    if (state.status !== 'results') {
-        return null;
-    }
-
-    const {
-        totalPostsScanned,
-        totalUniqueLikers,
-        totalLikes,
-        averageLikesPerPost,
-        mostLikedPost,
-        followingLeaderboard,
-        followerIds,
-        followingIds,
-        scanModes,
-    } = state;
-
-    const followerCount = followerIds.length;
-    const followingCount = followingIds.length;
-    const captionText = mostLikedPost?.edge_media_to_caption.edges[0]?.node.text;
-    const engagementRate = followerCount > 0 && totalPostsScanned > 0
-        ? ((totalLikes / totalPostsScanned / followerCount) * 100).toFixed(2)
-        : null;
-
-    // Top 5 fans from the following leaderboard
-    const topFans = [...followingLeaderboard]
-        .sort((a, b) => b.likesCount - a.likesCount)
-        .slice(0, 5)
-        .filter(e => e.likesCount > 0);
+    const caption = state.mostLikedPost?.edge_media_to_caption.edges[0]?.node.text;
+    const topLikers = state.followingLeaderboard
+        .filter(entry => entry.likesCount > 0)
+        .slice(0, 5);
 
     return (
-        <div className='dashboard'>
+        <main className='dashboard'>
             <div className='dashboard-grid'>
-                {/* Stats cards */}
                 <div className='stat-card'>
-                    <span className='stat-value'>{totalPostsScanned}</span>
-                    <span className='stat-label'>Posts Scanned</span>
+                    <span className='stat-value'>{state.totalPostsScanned}</span>
+                    <span className='stat-label'>Posts scanned</span>
                 </div>
                 <div className='stat-card'>
-                    <span className='stat-value'>{totalLikes.toLocaleString()}</span>
-                    <span className='stat-label'>Total Likes</span>
+                    <span className='stat-value'>{state.totalLikes.toLocaleString()}</span>
+                    <span className='stat-label'>Displayed post likes</span>
                 </div>
                 <div className='stat-card'>
-                    <span className='stat-value'>{averageLikesPerPost.toFixed(1)}</span>
-                    <span className='stat-label'>Avg Likes/Post</span>
+                    <span className='stat-value'>{state.averageLikesPerPost.toFixed(1)}</span>
+                    <span className='stat-label'>Average displayed likes</span>
                 </div>
                 <div className='stat-card'>
-                    <span className='stat-value'>{totalUniqueLikers}</span>
-                    <span className='stat-label'>Unique Likers</span>
+                    <span className='stat-value'>{state.totalUniqueLikers}</span>
+                    <span className='stat-label'>Identified likers</span>
                 </div>
-                {scanModes.followerAnalysis && (
+                {state.scanModes.followerAnalysis && (
                     <>
                         <div className='stat-card'>
-                            <span className='stat-value'>{followerCount.toLocaleString()}</span>
-                            <span className='stat-label'>Followers</span>
+                            <span className='stat-value'>{state.followerIds.length.toLocaleString()}</span>
+                            <span className='stat-label'>Followers returned</span>
                         </div>
                         <div className='stat-card'>
-                            <span className='stat-value'>{followingCount.toLocaleString()}</span>
-                            <span className='stat-label'>Following</span>
-                        </div>
-                        {engagementRate && (
-                            <div className='stat-card stat-card-highlight'>
-                                <span className='stat-value'>{engagementRate}%</span>
-                                <span className='stat-label'>Engagement Rate</span>
-                            </div>
-                        )}
-                        <div className='stat-card'>
-                            <span className='stat-value'>
-                                {followerCount > 0 ? (followingCount / followerCount).toFixed(2) : '-'}
-                            </span>
-                            <span className='stat-label'>Following/Follower Ratio</span>
+                            <span className='stat-value'>{state.followingIds.length.toLocaleString()}</span>
+                            <span className='stat-label'>Following returned</span>
                         </div>
                     </>
                 )}
             </div>
 
-            {/* Most liked post */}
-            {mostLikedPost && (
-                <div className='dashboard-section'>
-                    <h3>Most Liked Post</h3>
+            {state.mostLikedPost && (
+                <section className='dashboard-section'>
+                    <h2>Highest displayed like count</h2>
                     <div className='most-liked-card'>
-                        <div className='most-liked-info'>
-                            <span className='most-liked-likes'>
-                                {mostLikedPost.edge_media_preview_like.count.toLocaleString()} likes
-                            </span>
-                            {captionText !== undefined && (
-                                <p className='most-liked-caption'>
-                                    {captionText.substring(0, CAPTION_PREVIEW_LENGTH)}
-                                    {captionText.length > CAPTION_PREVIEW_LENGTH ? '...' : ''}
-                                </p>
-                            )}
-                        </div>
+                        <span className='most-liked-likes'>
+                            {state.mostLikedPost.edge_media_preview_like.count.toLocaleString()} likes
+                        </span>
+                        {caption && (
+                            <p className='most-liked-caption'>
+                                {caption.substring(0, CAPTION_PREVIEW_LENGTH)}
+                                {caption.length > CAPTION_PREVIEW_LENGTH ? '...' : ''}
+                            </p>
+                        )}
                     </div>
-                </div>
+                </section>
             )}
 
-            {/* Top 5 fans */}
-            {topFans.length > 0 && (
-                <div className='dashboard-section'>
-                    <h3>Top 5 Fans</h3>
+            {topLikers.length > 0 && (
+                <section className='dashboard-section'>
+                    <h2>Top identified likers you follow</h2>
                     <div className='top-fans'>
-                        {topFans.map((entry, idx) => (
+                        {topLikers.map((entry, index) => (
                             <div className='top-fan-entry' key={entry.user.id}>
-                                <div className={`top-fan-rank ${idx < 3 ? `rank-${idx + 1}` : ''}`}>
-                                    {idx < 3
-                                        ? <TrophyIcon rank={idx + 1} />
-                                        : `#${idx + 1}`
-                                    }
+                                <div className={`top-fan-rank ${index < 3 ? `rank-${index + 1}` : ''}`}>
+                                    {index < 3 ? <TrophyIcon rank={index + 1} /> : `#${index + 1}`}
                                 </div>
                                 <img
                                     className='top-fan-avatar'
-                                    alt={entry.user.username}
+                                    alt=''
                                     src={entry.user.profile_pic_url}
+                                    loading='lazy'
                                 />
                                 <div className='top-fan-info'>
                                     <a
                                         className='top-fan-username'
                                         target='_blank'
                                         href={`/${entry.user.username}`}
-                                        rel='noreferrer'
+                                        rel='noopener noreferrer'
                                     >
                                         {entry.user.username}
                                         {entry.user.is_verified && <span className='verified-badge'>&#10004;</span>}
                                     </a>
                                     <span className='top-fan-detail'>
-                                        {entry.likesCount} likes ({entry.percentage}%)
+                                        {entry.likesCount}/{entry.totalPosts} scanned posts ({entry.percentage}%)
                                     </span>
                                 </div>
                             </div>
                         ))}
                     </div>
-                </div>
+                </section>
             )}
-        </div>
+        </main>
     );
 };

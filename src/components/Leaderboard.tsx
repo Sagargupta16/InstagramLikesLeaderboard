@@ -1,4 +1,4 @@
-import React, { useMemo, memo } from 'react';
+import React, { useMemo } from 'react';
 import { State } from '../model/state';
 import { SortField } from '../model/sort-field';
 import { LeaderboardEntry } from '../model/leaderboard-entry';
@@ -23,8 +23,8 @@ interface RowProps {
     onHide: (userId: string) => void;
 }
 
-const LeaderboardRow = memo(({ entry, barWidth, onHide }: RowProps) => {
-    let entryClass = 'leaderboard-entry';
+const LeaderboardRow = ({ entry, barWidth, onHide }: RowProps) => {
+    let entryClass = 'leaderboard-entry leaderboard-row';
     let rankClass = 'entry-rank';
     if (entry.rank === 1) {
         entryClass += ' top-1';
@@ -44,7 +44,7 @@ const LeaderboardRow = memo(({ entry, barWidth, onHide }: RowProps) => {
             </div>
             <img
                 className='entry-avatar'
-                alt={entry.user.username}
+                alt=''
                 src={entry.user.profile_pic_url}
                 loading='lazy'
             />
@@ -53,7 +53,7 @@ const LeaderboardRow = memo(({ entry, barWidth, onHide }: RowProps) => {
                     className='entry-username'
                     target='_blank'
                     href={`/${entry.user.username}`}
-                    rel='noreferrer'
+                    rel='noopener noreferrer'
                 >
                     {entry.user.username}
                     {entry.user.is_verified && <span className='verified-badge'>&#10004;</span>}
@@ -62,7 +62,7 @@ const LeaderboardRow = memo(({ entry, barWidth, onHide }: RowProps) => {
             </div>
             <div className='entry-likes-bar'>
                 <div className='likes-bar-fill' style={{ width: `${barWidth}%` }} />
-                <span className='likes-bar-text'>
+                <span className='likes-bar-text' title='Identified likes / posts scanned'>
                     {entry.likesCount}/{entry.totalPosts}
                 </span>
             </div>
@@ -78,7 +78,7 @@ const LeaderboardRow = memo(({ entry, barWidth, onHide }: RowProps) => {
             </button>
         </div>
     );
-});
+};
 
 // Narrow once at the top so hooks below see a concrete shape.
 type ResultsState = Extract<State, { status: 'results' }>;
@@ -146,7 +146,7 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
     };
 
     const hideUser = (userId: string) => {
-        setState({ ...state, hiddenUsers: [...hiddenUsers, userId] });
+        setState({ ...state, hiddenUsers: [...hiddenUsers, userId], page: 1 });
     };
 
     const changePage = (delta: number) => {
@@ -165,11 +165,25 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
             <aside className='app-sidebar'>
                 <div className='sidebar-stats'>
                     <p>Posts scanned: {state.totalPostsScanned}</p>
-                    <p>Unique likers: {state.totalUniqueLikers}</p>
-                    <p>Total likes: {state.totalLikes}</p>
-                    <p>Following who liked: {followingLeaderboard.length}</p>
-                    <p>Non-following who liked: {notFollowingLeaderboard.length}</p>
+                    <p>Identified likers: {state.totalUniqueLikers}</p>
+                    <p>Displayed post likes: {state.totalLikes.toLocaleString()}</p>
+                    <p>You follow: {followingLeaderboard.length}</p>
+                    <p>You do not follow: {notFollowingLeaderboard.length}</p>
                 </div>
+
+                <label className='sidebar-search'>
+                    <span>Search leaderboard</span>
+                    <input
+                        type='search'
+                        value={searchTerm}
+                        placeholder='Username or name'
+                        onChange={event => setState({
+                            ...state,
+                            searchTerm: event.currentTarget.value,
+                            page: 1,
+                        })}
+                    />
+                </label>
 
                 <div className='filter-controls'>
                     <p>Filters</p>
@@ -202,7 +216,7 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
                                 checked={sortBy === 'likes'}
                                 onChange={() => handleSortChange('likes')}
                             />
-                            <span>Like count</span>
+                            <span>Identified likes</span>
                         </label>
                         <label className='badge'>
                             <input
@@ -211,7 +225,7 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
                                 checked={sortBy === 'percentage'}
                                 onChange={() => handleSortChange('percentage')}
                             />
-                            <span>Percentage</span>
+                            <span>Participation</span>
                         </label>
                         <label className='badge'>
                             <input
@@ -272,22 +286,24 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
             </aside>
 
             <article className='results-container'>
-                <nav className='tabs-container'>
+                <div className='tabs-container' role='group' aria-label='Leaderboard categories'>
                     <button
                         type='button'
                         className={`tab ${currentTab === 'following' ? 'tab-active' : ''}`}
                         onClick={() => switchTab('following')}
+                        aria-pressed={currentTab === 'following'}
                     >
-                        Following ({followingLeaderboard.length})
+                        You follow ({followingLeaderboard.length})
                     </button>
                     <button
                         type='button'
                         className={`tab ${currentTab === 'not_following' ? 'tab-active' : ''}`}
                         onClick={() => switchTab('not_following')}
+                        aria-pressed={currentTab === 'not_following'}
                     >
-                        Not Following ({notFollowingLeaderboard.length})
+                        You do not follow ({notFollowingLeaderboard.length})
                     </button>
-                </nav>
+                </div>
 
                 {pageEntries.length === 0 && (
                     <div className='empty-state'>

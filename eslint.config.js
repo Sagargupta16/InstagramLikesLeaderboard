@@ -5,7 +5,7 @@ const reactHooks = require('eslint-plugin-react-hooks');
 
 module.exports = [
     {
-        files: ['src/**/*.{ts,tsx}'],
+        files: ['src/**/*.{ts,tsx}', 'test/**/*.ts'],
         languageOptions: {
             parser: tsParser,
             parserOptions: {

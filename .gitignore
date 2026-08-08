@@ -8,10 +8,14 @@ bun.lockb
 .superpowers/
 docs/superpowers/
 
-# Added for consistency
+# Local credentials and environment
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+.mcp.json
+.playwright-mcp/
+
 *.log
+coverage/
 Thumbs.db
 .next/

@@ -7,9 +7,23 @@ interface ToastProps {
     onClose?: () => void;
 }
 
-export const Toast = ({ show = false, style = 'info', message, onClose }: ToastProps) => (
-    <div className={`toast ${show ? 'show' : ''} ${style}`} role='alert'>
-        <p className='toast__message'>{message}</p>
-        <button className='toast__close-button' onClick={onClose} title='close'>&times;</button>
-    </div>
-);
+export const Toast = ({ show = false, style = 'info', message, onClose }: ToastProps) => {
+    if (!show) {
+        return null;
+    }
+
+    const role = style === 'error' || style === 'warning' ? 'alert' : 'status';
+    return (
+        <div className={`toast ${style}`} role={role}>
+            <p className='toast__message'>{message}</p>
+            <button
+                type='button'
+                className='toast__close-button'
+                onClick={onClose}
+                aria-label='Dismiss message'
+            >
+                &times;
+            </button>
+        </div>
+    );
+};

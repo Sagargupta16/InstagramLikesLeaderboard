@@ -4,92 +4,63 @@
 > - Root [`CLAUDE.md`](../../CLAUDE.md) -- voice, rules, routing map, references, skills, slash commands, conventions.
 > - Root [`MEMORY.md`](../../MEMORY.md) -- live facts across repos.
 > - Root [`STATUS.md`](../../STATUS.md) -- live PR/CI/security dashboard.
-> - [`.claude/resources/`](../../.claude/resources/README.md) -- deep reference for collaboration, workflow, git, OSS, debugging, voice.
 >
-> Read those first. The guidance below only adds **repo-specific context** -- it does not override anything in the root.
-
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+> Read those first. This file adds repository-specific context only.
 
 ## What This Is
 
-A browser-based Instagram analyzer that scans your posts and provides three views: a likes leaderboard, follower analysis (who doesn't follow back, ghost followers, mutuals), and a stats dashboard. Users copy-paste a single JS snippet into their browser console on instagram.com. The snippet replaces the Instagram UI with a Preact app that calls Instagram's v1 REST API, collects data, and displays results. Results are cached in localStorage for instant reload.
+Instagram Likes Leaderboard 2.1.0 is a browser-console Preact application. Users copy one generated bundle into the console on `www.instagram.com`; it replaces the page with a local UI and calls Instagram's private v1 web endpoints using the existing browser session. There is no backend.
+
+Preserve the Preact/TypeScript/Webpack/SCSS architecture, npm/package-lock, ES2020 target, and single embedded production bundle. Do not add live Instagram calls to tests or CI.
 
 ## Commands
 
-- **Install:** `npm install`
-- **Dev build + serve:** `npm run build-dev` (full `build` + embed, then `webpack serve --mode development`)
-- **Production build:** `npm run build` (webpack build + `update-readme` embeds bundle into `public/index.html`)
-- **Webpack only:** `npm run webpack-build`
-- **Re-embed bundle only:** `npm run update-readme` (runs `scripts/update-index.js`)
-- **Lint:** `npm run lint` (ESLint v9 flat config in `eslint.config.js`)
+- Install exactly: `npm ci`
+- Develop: `npm run dev`
+- Build bundle: `npm run build:bundle`
+- Embed existing bundle: `npm run embed`
+- Production build: `npm run build`
+- Lint: `npm run lint`
+- Typecheck: `npm run typecheck`
+- Test: `npm test`
+- Full check: `npm run check`
+- Generated parity: `npm run check:generated`
+- Audit: `npm audit --audit-level=high`
 
-There are no tests.
+Use Node 24 from `.nvmrc`.
 
-## Build Pipeline
+## Request Contract
 
-Webpack compiles `src/main.tsx` into `dist/dist.js` (single minified bundle). Then `scripts/update-index.js` reads the bundle, escapes it, and injects it into `public/index.html` as a string constant (`instagramScript`). The landing page shows a "Copy Code" button that copies this embedded script to the clipboard. GitHub Actions (`.github/workflows/build_and_deploy_pages.yaml`) deploys `public/` to GitHub Pages on push to `main`.
+`createIgRequester()` in `src/utils/utils.ts` owns all Instagram traffic for one run. Requests must stay sequential. Fixed policy in `src/constants/constants.ts` enforces 2–3 second gaps, 20-second request timeout, one transient retry, 250 requests, 15 minutes, 150 posts, 6 post pages, and 40 pages per user list.
+
+Never retry auth, challenge/checkpoint, rate-limit/feedback, timeout, Stop, bounds, or invalid-response errors. Only network errors and HTTP 408/500/502/503/504 receive one retry. Keep the pause gate immediately before every fetch/retry. Stop must abort delays and in-flight fetches.
+
+No implementation can guarantee avoiding Instagram throttling or account enforcement. Do not add safety guarantees to UI or documentation.
+
+## Scan and Data Contract
+
+`src/utils/scanner.ts` performs posts, likers, following, and optional followers in order. Every required request must succeed; do not catch errors to continue with partial data. Keep cursor/page/post bounds and ID deduplication. Do not add liker pagination without documented, reviewed endpoint behavior.
+
+Displayed post-like totals come from post records. Leaderboard counts use only identities returned by the liker endpoint and can be incomplete.
+
+`src/utils/storage.ts` stores canonical schema-v2 inputs only after a complete scan. Runtime validation and owner-ID matching are mandatory. Derived leaderboards and aggregates are recomputed on load. Do not add a migration framework unless explicitly requested.
+
+## Build Contract
+
+Webpack emits `dist/dist.js`. `scripts/update-index.js` serializes it between the single `/*__ILL_BUNDLE_START__*/` and `/*__ILL_BUNDLE_END__*/` markers in `public/index.html`. `--check` must remain non-mutating and fail on stale content or invalid markers.
+
+The landing page must not add analytics, external fonts, raw bundle previews, or unchecked clipboard fallbacks.
 
 ## Architecture
 
-**Single-page Preact app** using React compatibility aliases (webpack + tsconfig both alias `react` to `preact/compat`). Written in TypeScript with SCSS styles. Target is ES2020 (tsconfig).
+- `src/bootstrap.ts` -- guarded bundle entry; validates host/login before loading styles or app code
+- `src/main.tsx` -- app mounting, per-run orchestration, AbortController lifecycle, state transitions, derived results
+- `src/utils/utils.ts` -- requester, errors, URLs, aggregation, sorting, exports
+- `src/utils/scanner.ts` -- bounded scan phases and response validation
+- `src/utils/storage.ts` -- owner-scoped schema-v2 persistence
+- `src/constants/constants.ts` -- fixed request policy and shared constants
+- `src/components/` -- functional Preact components
+- `src/styles/main.scss` -- styles scoped beneath `.ill`
+- `test/` -- mocked requester/scanner/storage/embed tests
 
-### State Machine
-
-The app has three states defined as a discriminated union in `src/model/state.ts`:
-- `initial` - mode selector screen with checkboxes (Leaderboard, Dashboard, Follower Analysis) + load previous results option
-- `scanning` - four sequential phases (fetching_posts, fetching_likes, fetching_following, fetching_followers)
-- `results` - three switchable views via `ResultsNav`: Dashboard, Leaderboard, Follower Analysis
-
-### Result Views
-
-- **Dashboard** (`src/components/Dashboard.tsx`) - stat cards (posts, likes, engagement rate, etc.), top 5 fans, most liked post
-- **Leaderboard** (`src/components/Leaderboard.tsx`) - ranked list with Following/Not Following tabs, verified account filter toggle, per-user hide button
-- **Follower Analysis** (`src/components/FollowerAnalysis.tsx`) - four tabs: Don't Follow Back, Not Following Back, Mutual, Ghost Followers
-
-### Scanning Pipeline
-
-Scanning phases are extracted into `src/utils/scanner.ts` as standalone async functions:
-- `fetchAllPosts()` - Phase 1
-- `fetchAllLikers()` - Phase 2
-- `fetchFollowing()` - Phase 3
-- `fetchFollowers()` - Phase 4 (only if Follower Analysis mode selected)
-
-`main.tsx` orchestrates these phases via a `useEffect` and manages state updates through callbacks.
-
-### Instagram API
-
-Uses v1 REST endpoints (not GraphQL):
-- `/api/v1/feed/user/{id}/` - user's posts (paginated via `next_max_id`)
-- `/api/v1/media/{id}/likers/` - likers for a single post
-- `/api/v1/friendships/{id}/following/` - following list (paginated)
-- `/api/v1/friendships/{id}/followers/` - followers list (paginated)
-
-All requests go through `igFetch()` in `src/utils/utils.ts` which attaches the `x-ig-app-id`, CSRF token, and credentials headers.
-
-### localStorage Persistence
-
-`src/utils/storage.ts` handles saving/loading scan results under the `ill_scan_results` key. On load, if previous results exist, the mode selector shows a "Load previous results" button that skips directly to the results view.
-
-### Key Files
-
-- `src/main.tsx` - app entry, state management, scan orchestration
-- `src/utils/scanner.ts` - scanning phase functions (posts, likers, following, followers)
-- `src/utils/utils.ts` - API helpers, data aggregation, sort/filter/pagination, CSV/JSON export
-- `src/utils/storage.ts` - localStorage persistence for scan results
-- `src/constants/constants.ts` - timing defaults, retry limits, IG app ID
-- `src/model/` - TypeScript types (State, ScanModes, ResultsView, FollowerTab, etc.)
-- `src/components/` - UI components (ModeSelector, Dashboard, Leaderboard, FollowerAnalysis, ResultsNav, Scanning, NotScanning, Toolbar, SettingMenu, Toast)
-- `scripts/update-index.js` - post-build script that embeds the bundle into the landing page
-
-## Style Rules
-
-- Single quotes, semicolons required, trailing commas on multiline
-- `readonly` on interface fields and function params where possible
-- Preact functional components with hooks only
-- SCSS with BEM-like class naming under `.ill` namespace
-- Node 24 (`.nvmrc`)
-
-## Deployment
-
-GitHub Pages via GitHub Actions (`main` branch trigger). The workflow installs deps with `npm install`, runs `npm run build`, uploads `public/` as a Pages artifact, and deploys via `actions/deploy-pages@v4`.
+Use single quotes, semicolons, trailing commas on multiline structures, functional components/hooks, and readonly interface fields. Keep changes surgical and prefer removing obsolete paths over adding abstractions.

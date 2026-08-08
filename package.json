@@ -1,42 +1,41 @@
 {
   "name": "instagram-likes-leaderboard",
+  "version": "2.1.0",
+  "private": true,
   "scripts": {
-    "webpack-build": "webpack --mode production",
-    "build-dev": "npm run build && webpack serve --mode development",
-    "build-prod": "npm run webpack-build && webpack serve --mode production",
-    "update-readme": "node scripts/update-index.js public/index.html dist/dist.js",
-    "build": "npm run webpack-build && npm run update-readme",
-    "lint": "eslint src/"
-  },
-  "babel": {
-    "plugins": [
-      "@babel/plugin-transform-react-jsx"
-    ]
-  },
-  "devDependencies": {
-    "@babel/cli": "^7.26.4",
-    "@babel/core": "^7.26.0",
-    "@babel/plugin-transform-react-jsx": "^7.25.9",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0",
-    "css-loader": "^7.0.0",
-    "eslint": "^9.0.0",
-    "eslint-plugin-react": "^7.37.4",
-    "eslint-plugin-react-hooks": "^7.0.0",
-    "sass": "^1.83.4",
-    "sass-loader": "^16.0.0",
-    "style-loader": "^4.0.0",
-    "ts-loader": "^9.5.2",
-    "typescript": "^5.7.3",
-    "webpack": "^5.97.1",
-    "webpack-cli": "^6.0.0",
-    "webpack-dev-server": "^5.2.0"
+    "dev": "npm run build && webpack serve --mode development",
+    "build:bundle": "webpack --mode production",
+    "embed": "node scripts/update-index.js public/index.html dist/dist.js",
+    "build": "npm run build:bundle && npm run embed",
+    "check:generated": "npm run build:bundle && node scripts/update-index.js --check public/index.html dist/dist.js",
+    "lint": "eslint src/ \"test/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test",
+    "check": "npm run lint && npm run typecheck && npm test && npm run check:generated"
   },
   "dependencies": {
-    "preact": "^10.25.4"
+    "preact": "10.29.8"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "@typescript-eslint/eslint-plugin": "8.66.0",
+    "@typescript-eslint/parser": "8.66.0",
+    "css-loader": "7.1.4",
+    "eslint": "9.39.5",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "sass": "1.102.0",
+    "sass-loader": "16.0.8",
+    "style-loader": "4.0.0",
+    "ts-loader": "9.6.2",
+    "tsx": "4.23.11",
+    "typescript": "5.9.3",
+    "webpack": "5.109.2",
+    "webpack-cli": "6.0.1",
+    "webpack-dev-server": "5.2.6"
   },
   "overrides": {
-    "qs": "^6.15.2",
-    "uuid": "^11.1.1"
+    "qs": "6.15.3",
+    "uuid": "11.1.1"
   }
 }

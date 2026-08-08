@@ -85,10 +85,10 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
     };
 
     const tabs: Array<{ key: FollowerTab; label: string; count: number }> = [
-        { key: 'dont_follow_back', label: "Don't Follow Back", count: categories.dontFollowBack.length },
-        { key: 'not_following_back', label: 'Not Following Back', count: categories.notFollowingBack.length },
+        { key: 'dont_follow_back', label: "They Don't Follow Back", count: categories.dontFollowBack.length },
+        { key: 'not_following_back', label: "You Don't Follow Back", count: categories.notFollowingBack.length },
         { key: 'mutual', label: 'Mutual', count: categories.mutual.length },
-        { key: 'ghost', label: 'Ghost Followers', count: categories.ghost.length },
+        { key: 'ghost', label: 'No Identified Likes', count: categories.ghost.length },
     ];
 
     return (
@@ -100,11 +100,11 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
                     <p>Mutual: {categories.mutual.length}</p>
                 </div>
 
-                <div className='follower-search'>
+                <label className='sidebar-search'>
+                    <span>Search follower comparison</span>
                     <input
-                        type='text'
-                        className='follower-search-input'
-                        placeholder='Search users...'
+                        type='search'
+                        placeholder='Username or name'
                         value={followerSearchTerm}
                         onChange={e => setState({
                             ...state,
@@ -112,7 +112,7 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
                             followerPage: 1,
                         })}
                     />
-                </div>
+                </label>
 
                 <div className='sidebar-pagination'>
                     <p>Pages</p>
@@ -141,18 +141,19 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
             </aside>
 
             <article className='results-container'>
-                <nav className='tabs-container'>
+                <div className='tabs-container' role='group' aria-label='Follower categories'>
                     {tabs.map(t => (
                         <button
                             type='button'
                             key={t.key}
                             className={`tab follower-tab ${followerTab === t.key ? 'tab-active' : ''}`}
                             onClick={() => setTab(t.key)}
+                            aria-pressed={followerTab === t.key}
                         >
                             {t.label} ({t.count})
                         </button>
                     ))}
-                </nav>
+                </div>
 
                 {pageUsers.length === 0 && (
                     <div className='empty-state'>
@@ -166,7 +167,7 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
                         <div className='leaderboard-entry' key={user.id}>
                             <img
                                 className='entry-avatar'
-                                alt={user.username}
+                                alt=''
                                 src={user.profile_pic_url}
                                 loading='lazy'
                             />
@@ -175,7 +176,7 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
                                     className='entry-username'
                                     target='_blank'
                                     href={`/${user.username}`}
-                                    rel='noreferrer'
+                                    rel='noopener noreferrer'
                                 >
                                     {user.username}
                                     {user.is_verified && <span className='verified-badge'>&#10004;</span>}
@@ -183,7 +184,7 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
                                 <span className='entry-fullname'>{user.full_name}</span>
                             </div>
                             <div className={`follower-likes-info ${likes === 0 ? 'follower-likes-empty' : ''}`}>
-                                {likes} likes
+                                {likes} identified likes
                             </div>
                         </div>
                     );
