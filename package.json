@@ -18,24 +18,24 @@
   },
   "devDependencies": {
     "@types/node": "24.13.3",
-    "@typescript-eslint/eslint-plugin": "8.66.0",
-    "@typescript-eslint/parser": "8.66.0",
-    "css-loader": "7.1.4",
+    "@typescript-eslint/eslint-plugin": "8.69.0",
+    "@typescript-eslint/parser": "8.69.0",
+    "css-loader": "7.1.5",
     "eslint": "9.39.5",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.1.1",
-    "sass": "1.102.0",
+    "sass": "1.103.1",
     "sass-loader": "16.0.8",
     "style-loader": "4.0.0",
     "ts-loader": "9.6.2",
-    "tsx": "4.23.11",
+    "tsx": "4.23.13",
     "typescript": "5.9.3",
-    "webpack": "5.109.2",
+    "webpack": "5.110.3",
     "webpack-cli": "6.0.1",
     "webpack-dev-server": "5.2.6"
   },
   "overrides": {
-    "qs": "6.15.3",
+    "qs": "6.16.0",
     "uuid": "11.1.1"
   }
 }
