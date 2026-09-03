@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.2] - 2026-09-03
+
+### Security
+
+- Bump transitive browserslist and fast-uri past high-severity advisories (npm audit gate).
+
+### Fixed
+
+- Bumped transitive postcss-selector-parser from 7.1.1 to 7.1.5 to resolve a denial-of-service advisory (uncontrolled AST recursion, GitHub Dependabot alert #40)
+
 ## [2.2.1] - 2026-08-08
 
 ### Changed
