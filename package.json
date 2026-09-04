@@ -21,7 +21,7 @@
     "@typescript-eslint/eslint-plugin": "8.69.0",
     "@typescript-eslint/parser": "8.69.0",
     "css-loader": "7.1.5",
-    "eslint": "9.39.5",
+    "eslint": "10.10.0",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.1.1",
     "sass": "1.103.1",
@@ -29,7 +29,7 @@
     "style-loader": "4.0.0",
     "ts-loader": "9.6.2",
     "tsx": "4.23.13",
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "webpack": "5.110.3",
     "webpack-cli": "7.2.3",
     "webpack-dev-server": "6.0.0"
