@@ -1,1 +1,15 @@
-{"$schema":"https://docs.renovatebot.com/renovate-schema.json","extends":["github>Sagargupta16/shared-workflows"]}
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>Sagargupta16/shared-workflows"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "typescript"
+      ],
+      "allowedVersions": "<7",
+      "description": "Hold TypeScript below 7. typescript-eslint 8.69 declares peerDependencies typescript '>=4.8.4 <6.1.0' and hard-fails lint with 'typescript-eslint does not support TS 7.0', so the grouped major PR could never go green. Holding it here keeps the rest of the monthly majors mergeable. Remove this rule once typescript-eslint widens its peer range to accept 7."
+    }
+  ]
+}
