@@ -157,6 +157,7 @@ function classifyResponse(
 ): RequestError | null {
     const text = signalText(payload);
     const loginRedirect = response.redirected && response.url.includes('/accounts/login');
+    const pageRedirect = response.redirected && !new URL(response.url).pathname.startsWith('/api/');
 
     if (response.status === 401 || loginRedirect || text.includes('login_required')) {
         return new RequestError('auth', 'Instagram login is required.', { status: response.status });
@@ -176,6 +177,7 @@ function classifyResponse(
     }
     if (
         response.status === 403
+        || pageRedirect
         || text.includes('challenge_required')
         || text.includes('checkpoint')
         || text.includes('sentry_block')
@@ -349,7 +351,14 @@ export function createIgRequester(options: IgRequesterOptions): IgRequester {
                         throw responseError;
                     }
                     if (parseError !== null) {
-                        throw new RequestError('invalid_response', 'Instagram returned a non-JSON response.', {
+                        console.warn(`${label}: non-JSON Instagram response`, {
+                            url,
+                            finalUrl: response.url,
+                            status: response.status,
+                            contentType: response.headers.get('content-type'),
+                            body: body.slice(0, 500),
+                        });
+                        throw new RequestError('invalid_response', `${label} returned a non-JSON response (HTTP ${response.status}).`, {
                             status: response.status,
                             originalError: parseError,
                         });
