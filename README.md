@@ -14,7 +14,7 @@ A browser-console tool that builds a leaderboard from the liker identities Insta
 ## Use
 
 1. Open the [tool page](https://sagargupta.online/InstagramLikesLeaderboard/) and select **Copy Code**.
-2. Sign in at [instagram.com](https://www.instagram.com/).
+2. Sign in at [instagram.com](https://www.instagram.com/) and open your own profile page (`instagram.com/your_username/`). The tool reads the posts query Instagram's profile page uses, so it will not start from other pages.
 3. Open the browser developer console:
    - Windows/Linux: `Ctrl + Shift + J`
    - macOS: `Cmd + Option + J`

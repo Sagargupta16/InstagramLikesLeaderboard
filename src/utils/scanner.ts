@@ -2,11 +2,13 @@ import { PostNode, PostScope } from '../model/post';
 import { LikerAccumulator, LikerUserNode, UserListScope } from '../model/user';
 import {
     IgRequester,
+    POSTS_QUERY_URL,
+    PostsQuery,
     RequestError,
     followersUrlGenerator,
     followingUrlGenerator,
     postLikersUrlGenerator,
-    userMediaUrlGenerator,
+    postsQueryRequest,
 } from './utils';
 
 export interface PostsResult {
@@ -80,8 +82,19 @@ function parseCursor(value: unknown, context: string): string | null {
     return String(value);
 }
 
+function postOwnerId(value: unknown): string | null {
+    const item = asRecord(value, 'post');
+    if (!item.user || typeof item.user !== 'object') {
+        return null;
+    }
+    const user = item.user as Record<string, unknown>;
+    const id = user.pk ?? user.id;
+    return typeof id === 'string' || typeof id === 'number' ? String(id) : null;
+}
+
 export async function fetchAllPosts(
     requester: IgRequester,
+    query: PostsQuery,
     onProgress: (posts: readonly PostNode[]) => void,
 ): Promise<PostsResult> {
     const posts: PostNode[] = [];
@@ -90,17 +103,35 @@ export async function fetchAllPosts(
     let cursor: string | undefined;
 
     for (;;) {
-        const data = asRecord(
-            await requester.request<unknown>(userMediaUrlGenerator(requester.ownerId, cursor), 'Posts'),
+        const response = asRecord(
+            await requester.request<unknown>(
+                POSTS_QUERY_URL,
+                'Posts',
+                postsQueryRequest(query, requester.ownerId, cursor),
+            ),
             'post list',
         );
-        if (!Array.isArray(data.items) || typeof data.more_available !== 'boolean') {
+        const connection = asRecord(
+            asRecord(response.data, 'post list').xdt_api__v1__feed__user_timeline_graphql_connection,
+            'post list',
+        );
+        const pageInfo = asRecord(connection.page_info, 'post page');
+        if (!Array.isArray(connection.edges) || typeof pageInfo.has_next_page !== 'boolean') {
             throw new RequestError('invalid_response', 'Instagram returned an invalid post list.');
         }
+        const items = connection.edges.map(edge => asRecord(edge, 'post').node);
+        if (cursor === undefined && items.length > 0
+            && !items.some(item => postOwnerId(item) === requester.ownerId)) {
+            throw new RequestError(
+                'invalid_response',
+                `The posts for @${query.username} do not belong to the signed-in account. Run this from your own profile page.`,
+            );
+        }
+        const moreAvailable = pageInfo.has_next_page;
 
         let uniqueOnPage = 0;
         let exceededPostLimit = false;
-        for (const value of data.items) {
+        for (const value of items) {
             const post = parsePost(value);
             if (postIds.has(post.id)) {
                 continue;
@@ -115,17 +146,17 @@ export async function fetchAllPosts(
         }
         onProgress([...posts]);
 
-        if (exceededPostLimit || (posts.length >= requester.policy.maxPosts && data.more_available)) {
+        if (exceededPostLimit || (posts.length >= requester.policy.maxPosts && moreAvailable)) {
             return { posts, postScope: 'recent_limit' };
         }
-        if (!data.more_available) {
+        if (!moreAvailable) {
             return { posts, postScope: 'all_posts' };
         }
         if (uniqueOnPage === 0) {
             throw new RequestError('bounds', 'Instagram repeated a post page before the scan completed.');
         }
 
-        const nextCursor = parseCursor(data.next_max_id, 'post');
+        const nextCursor = parseCursor(pageInfo.end_cursor, 'post');
         if (nextCursor === null) {
             throw new RequestError('bounds', 'Instagram declared more posts without a continuation cursor.');
         }

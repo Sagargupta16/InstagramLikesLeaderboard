@@ -3,7 +3,7 @@ import test from 'node:test';
 import { REQUEST_POLICY, RequestPolicy } from '../src/constants/constants';
 import { PostNode } from '../src/model/post';
 import { fetchAllLikers, fetchAllPosts, fetchFollowing } from '../src/utils/scanner';
-import { IgRequester, RequestError } from '../src/utils/utils';
+import { IgRequester, PostsQuery, RequestError } from '../src/utils/utils';
 
 function fakeRequester(
     responses: unknown[],
@@ -27,10 +27,22 @@ function fakeRequester(
     };
 }
 
-const rawPost = (id: string) => ({
+const rawPost = (id: string, ownerId = 'owner') => ({
     pk: id,
     like_count: Number(id) || 1,
     caption: null,
+    user: { pk: ownerId },
+});
+
+const postsQuery: PostsQuery = { username: 'owner', docId: '1', lsd: 'lsd', fbDtsg: 'dtsg' };
+
+const postPage = (items: unknown[], endCursor: string | null = null) => ({
+    data: {
+        xdt_api__v1__feed__user_timeline_graphql_connection: {
+            edges: items.map(node => ({ node })),
+            page_info: { has_next_page: endCursor !== null, end_cursor: endCursor },
+        },
+    },
 });
 
 const post = (id: string): PostNode => ({
@@ -48,33 +60,36 @@ const rawUser = (id: string) => ({
 });
 
 test('post scanner deduplicates IDs and returns a bounded recent scope', async () => {
-    const requester = fakeRequester([{
-        items: [rawPost('1'), rawPost('1'), rawPost('2'), rawPost('3')],
-        more_available: false,
-    }], { maxPosts: 2 });
+    const requester = fakeRequester([
+        postPage([rawPost('1'), rawPost('1'), rawPost('2'), rawPost('3')]),
+    ], { maxPosts: 2 });
 
-    const result = await fetchAllPosts(requester, () => undefined);
+    const result = await fetchAllPosts(requester, postsQuery, () => undefined);
     assert.deepEqual(result.posts.map(item => item.id), ['1', '2']);
     assert.equal(result.postScope, 'recent_limit');
 });
 
 test('post scanner rejects a repeated cursor before completion', async () => {
     const requester = fakeRequester([
-        { items: [rawPost('1')], more_available: true, next_max_id: 'same' },
-        { items: [rawPost('2')], more_available: true, next_max_id: 'same' },
+        postPage([rawPost('1')], 'same'),
+        postPage([rawPost('2')], 'same'),
     ]);
 
-    await assert.rejects(fetchAllPosts(requester, () => undefined), error =>
+    await assert.rejects(fetchAllPosts(requester, postsQuery, () => undefined), error =>
         error instanceof RequestError && error.kind === 'bounds');
+});
+
+test('post scanner rejects a profile that is not the signed-in account', async () => {
+    const requester = fakeRequester([postPage([rawPost('1', 'someone-else')])]);
+
+    await assert.rejects(fetchAllPosts(requester, postsQuery, () => undefined), error =>
+        error instanceof RequestError && error.kind === 'invalid_response');
 });
 
 test('scanner rejects missing usernames and invalid like counts', async () => {
     for (const likeCount of [undefined, -1, Number.NaN]) {
-        const requester = fakeRequester([{
-            items: [{ ...rawPost('1'), like_count: likeCount }],
-            more_available: false,
-        }]);
-        await assert.rejects(fetchAllPosts(requester, () => undefined), error =>
+        const requester = fakeRequester([postPage([{ ...rawPost('1'), like_count: likeCount }])]);
+        await assert.rejects(fetchAllPosts(requester, postsQuery, () => undefined), error =>
             error instanceof RequestError && error.kind === 'invalid_response');
     }
 

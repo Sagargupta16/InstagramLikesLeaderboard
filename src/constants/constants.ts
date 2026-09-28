@@ -3,7 +3,10 @@ export const LEADERBOARD_ENTRIES_PER_PAGE = 50;
 
 // Instagram Web App ID required by the private web endpoints used by this tool.
 export const IG_APP_ID = '936619743392459';
-export const POSTS_PER_PAGE = 33;
+export const IG_ASBD_ID = '359341';
+// Profile posts moved from /api/v1/feed/user/ to this persisted GraphQL query in September 2026.
+export const POSTS_QUERY_NAME = 'PolarisProfilePostsTabContentQuery_connection';
+export const POSTS_PER_PAGE = 12;
 
 export interface RequestPolicy {
     readonly minGapMs: number;
