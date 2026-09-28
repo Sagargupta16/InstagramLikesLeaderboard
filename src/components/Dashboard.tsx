@@ -154,7 +154,7 @@ export const Dashboard = ({ state, setState }: DashboardProps) => {
 
             <section className='dashboard-section'>
                 <h2>
-                    Audience of identified likers
+                    <span>Audience of identified likers</span>
                     <span className='section-count'>
                         {matchingLikers.length.toLocaleString()}
                         {matchingLikers.length !== likers.length && ` of ${likers.length.toLocaleString()}`}
