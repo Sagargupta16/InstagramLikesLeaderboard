@@ -1,5 +1,5 @@
 import { INSTAGRAM_HOSTNAME } from './constants/constants';
-import { getInstagramOwnerId } from './utils/utils';
+import { getInstagramOwnerId, getPostsQuery } from './utils/utils';
 
 async function bootstrap(): Promise<void> {
     if (location.hostname !== INSTAGRAM_HOSTNAME) {
@@ -17,8 +17,14 @@ async function bootstrap(): Promise<void> {
         return;
     }
 
+    const postsQuery = getPostsQuery();
+    if (!postsQuery) {
+        alert('Open your own Instagram profile page (instagram.com/your_username/), reload it, then run this again.');
+        return;
+    }
+
     const { mountApp } = await import(/* webpackMode: "eager" */ './main');
-    mountApp(ownerId);
+    mountApp(ownerId, postsQuery);
 }
 
 void bootstrap();

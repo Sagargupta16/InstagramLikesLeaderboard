@@ -3,8 +3,10 @@ import { LeaderboardEntry } from '../model/leaderboard-entry';
 import { SortField } from '../model/sort-field';
 import {
     IG_APP_ID,
+    IG_ASBD_ID,
     LEADERBOARD_ENTRIES_PER_PAGE,
     POSTS_PER_PAGE,
+    POSTS_QUERY_NAME,
     REQUEST_POLICY,
     RequestPolicy,
 } from '../constants/constants';
@@ -64,6 +66,38 @@ export function getInstagramOwnerId(): string | null {
     return getCookie('ds_user_id');
 }
 
+function pageModule(name: string): unknown {
+    // Instagram's page exposes its module registry as a global `require`; read it by
+    // key so webpack does not rewrite it.
+    const pageRequire = Reflect.get(globalThis, 'require') as unknown;
+    if (typeof pageRequire !== 'function') {
+        return null;
+    }
+    try {
+        return pageRequire(name);
+    } catch {
+        return null;
+    }
+}
+
+function moduleToken(name: string): string {
+    const value = pageModule(name);
+    const token = value && typeof value === 'object' ? (value as Record<string, unknown>).token : null;
+    return typeof token === 'string' ? token : '';
+}
+
+export function getPostsQuery(): PostsQuery | null {
+    const username = location.pathname.split('/')[1] ?? '';
+    const docId = pageModule(`${POSTS_QUERY_NAME}_instagramRelayOperation`);
+    const lsd = moduleToken('LSD');
+    const fbDtsg = moduleToken('DTSGInitialData');
+    if (!/^[A-Za-z0-9._]{1,30}$/.test(username) || typeof docId !== 'string' || !/^\d+$/.test(docId)
+        || lsd === '' || fbDtsg === '') {
+        return null;
+    }
+    return { username, docId, lsd, fbDtsg };
+}
+
 export function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
     if (signal.aborted) {
         return Promise.reject(new RequestError('stopped', 'Scan stopped.'));
@@ -101,11 +135,24 @@ interface RetryNotice {
     readonly delayMs: number;
 }
 
+export interface FormRequest {
+    readonly body: URLSearchParams;
+    readonly headers: Readonly<Record<string, string>>;
+}
+
 export interface IgRequester {
     readonly ownerId: string;
     readonly policy: Readonly<RequestPolicy>;
     readonly requestCount: number;
-    request<T>(url: string, label: string): Promise<T>;
+    request<T>(url: string, label: string, form?: FormRequest): Promise<T>;
+}
+
+// Values Instagram's own profile page uses for its posts GraphQL query.
+export interface PostsQuery {
+    readonly username: string;
+    readonly docId: string;
+    readonly lsd: string;
+    readonly fbDtsg: string;
 }
 
 interface IgRequesterOptions {
@@ -156,8 +203,9 @@ function classifyResponse(
     now: number,
 ): RequestError | null {
     const text = signalText(payload);
-    const loginRedirect = response.redirected && response.url.includes('/accounts/login');
-    const pageRedirect = response.redirected && !new URL(response.url).pathname.startsWith('/api/');
+    const redirectPath = response.redirected ? new URL(response.url).pathname : '';
+    const loginRedirect = redirectPath.startsWith('/accounts/login');
+    const challengeRedirect = /^\/(challenge|checkpoint|accounts\/suspended)\b/.test(redirectPath);
 
     if (response.status === 401 || loginRedirect || text.includes('login_required')) {
         return new RequestError('auth', 'Instagram login is required.', { status: response.status });
@@ -177,7 +225,7 @@ function classifyResponse(
     }
     if (
         response.status === 403
-        || pageRedirect
+        || challengeRedirect
         || text.includes('challenge_required')
         || text.includes('checkpoint')
         || text.includes('sentry_block')
@@ -185,6 +233,13 @@ function classifyResponse(
         return new RequestError('challenge', 'Instagram blocked the request with a challenge or checkpoint.', {
             status: response.status,
         });
+    }
+    if (redirectPath !== '' && !redirectPath.startsWith('/api/') && !redirectPath.startsWith('/graphql/')) {
+        return new RequestError(
+            'invalid_response',
+            `Instagram redirected the request to ${redirectPath} instead of returning data.`,
+            { status: response.status },
+        );
     }
     if (!response.ok) {
         const retryAfter = parseRetryAfter(response.headers.get('retry-after'), now);
@@ -198,12 +253,61 @@ function classifyResponse(
     return null;
 }
 
+function parseResponse(
+    response: Response,
+    body: string,
+    url: string,
+    label: string,
+    policy: Readonly<RequestPolicy>,
+    now: number,
+): unknown {
+    let payload: unknown = null;
+    let parseError: unknown = null;
+    if (body.trim() !== '') {
+        try {
+            payload = JSON.parse(body);
+        } catch (error) {
+            parseError = error;
+        }
+    }
+
+    const responseError = classifyResponse(response, payload, policy, now);
+    if (responseError) {
+        throw responseError;
+    }
+    if (parseError !== null) {
+        console.warn(`${label}: non-JSON Instagram response`, {
+            url,
+            finalUrl: response.url,
+            status: response.status,
+            contentType: response.headers.get('content-type'),
+            body: body.slice(0, 500),
+        });
+        throw new RequestError('invalid_response', `${label} returned a non-JSON response (HTTP ${response.status}).`, {
+            status: response.status,
+            originalError: parseError,
+        });
+    }
+    if (payload === null) {
+        throw new RequestError('invalid_response', 'Instagram returned an empty response.', {
+            status: response.status,
+        });
+    }
+    return payload;
+}
+
+function isRetryable(error: RequestError): boolean {
+    return error.kind === 'network'
+        || (error.kind === 'http' && error.status !== undefined && TRANSIENT_STATUSES.has(error.status));
+}
+
 async function fetchWithTimeout(
     url: string,
     fetchImpl: typeof fetch,
     runSignal: AbortSignal,
     timeoutMs: number,
     timeoutError: RequestError,
+    form?: FormRequest,
 ): Promise<{ readonly response: Response; readonly body: string }> {
     const controller = new AbortController();
     const onRunAbort = () => controller.abort();
@@ -214,12 +318,15 @@ async function fetchWithTimeout(
 
     try {
         const response = await fetchImpl(url, {
+            method: form ? 'POST' : 'GET',
             headers: {
                 'accept': 'application/json',
                 'x-ig-app-id': IG_APP_ID,
                 'x-requested-with': 'XMLHttpRequest',
                 'x-csrftoken': getCookie('csrftoken') || '',
+                ...form?.headers,
             },
+            body: form?.body,
             credentials: 'include',
             signal: controller.signal,
         });
@@ -304,7 +411,7 @@ export function createIgRequester(options: IgRequesterOptions): IgRequester {
         }
     };
 
-    const request = async <T>(url: string, label: string): Promise<T> => {
+    const request = async <T>(url: string, label: string, form?: FormRequest): Promise<T> => {
         if (active) {
             throw new RequestError('bounds', 'Concurrent Instagram requests are not allowed.');
         }
@@ -334,51 +441,16 @@ export function createIgRequester(options: IgRequesterOptions): IgRequester {
                         options.signal,
                         timeoutMs,
                         timeoutError,
+                        form,
                     );
                     ensureWithinRunTime();
-                    let payload: unknown = null;
-                    let parseError: unknown = null;
-                    if (body.trim() !== '') {
-                        try {
-                            payload = JSON.parse(body);
-                        } catch (error) {
-                            parseError = error;
-                        }
-                    }
-
-                    const responseError = classifyResponse(response, payload, policy, now());
-                    if (responseError) {
-                        throw responseError;
-                    }
-                    if (parseError !== null) {
-                        console.warn(`${label}: non-JSON Instagram response`, {
-                            url,
-                            finalUrl: response.url,
-                            status: response.status,
-                            contentType: response.headers.get('content-type'),
-                            body: body.slice(0, 500),
-                        });
-                        throw new RequestError('invalid_response', `${label} returned a non-JSON response (HTTP ${response.status}).`, {
-                            status: response.status,
-                            originalError: parseError,
-                        });
-                    }
-                    if (payload === null) {
-                        throw new RequestError('invalid_response', 'Instagram returned an empty response.', {
-                            status: response.status,
-                        });
-                    }
-                    return payload as T;
+                    return parseResponse(response, body, url, label, policy, now()) as T;
                 } catch (error) {
                     const requestError = isRequestError(error)
                         ? error
                         : new RequestError('network', 'The Instagram request failed.', { originalError: error });
-                    const retryable = requestError.kind === 'network'
-                        || (requestError.kind === 'http'
-                            && requestError.status !== undefined
-                            && TRANSIENT_STATUSES.has(requestError.status));
 
-                    if (!retryable || attempt >= policy.maxAttempts) {
+                    if (!isRetryable(requestError) || attempt >= policy.maxAttempts) {
                         throw requestError;
                     }
                     ensureAvailable();
@@ -411,9 +483,45 @@ export function createIgRequester(options: IgRequesterOptions): IgRequester {
     };
 }
 
-export function userMediaUrlGenerator(ownerId: string, nextMaxId?: string): string {
-    const cursor = nextMaxId === undefined ? '' : `&max_id=${encodeURIComponent(nextMaxId)}`;
-    return `https://www.instagram.com/api/v1/feed/user/${encodeURIComponent(ownerId)}/?count=${POSTS_PER_PAGE}${cursor}`;
+export const POSTS_QUERY_URL = 'https://www.instagram.com/graphql/query';
+
+export function postsQueryRequest(query: PostsQuery, ownerId: string, after?: string): FormRequest {
+    const variables = {
+        after: after ?? null,
+        before: null,
+        first: POSTS_PER_PAGE,
+        last: null,
+        username: query.username,
+        include_multi_captions: true,
+        data: {
+            count: POSTS_PER_PAGE,
+            include_reel_media_seen_timestamp: true,
+            include_relationship_info: true,
+            latest_besties_reel_media: true,
+            latest_reel_media: true,
+        },
+        __relay_internal__pv__PolarisMultiCaptionCarouselEnabledrelayprovider: true,
+        __relay_internal__pv__PolarisShortDramaEnabledrelayprovider: false,
+        __relay_internal__pv__PolarisReelsRecoDebugOverlayEnabledrelayprovider: false,
+    };
+    return {
+        body: new URLSearchParams({
+            av: ownerId,
+            fb_dtsg: query.fbDtsg,
+            lsd: query.lsd,
+            fb_api_caller_class: 'RelayModern',
+            fb_api_req_friendly_name: POSTS_QUERY_NAME,
+            server_timestamps: 'true',
+            variables: JSON.stringify(variables),
+            doc_id: query.docId,
+        }),
+        headers: {
+            'content-type': 'application/x-www-form-urlencoded',
+            'x-asbd-id': IG_ASBD_ID,
+            'x-fb-lsd': query.lsd,
+            'x-fb-friendly-name': POSTS_QUERY_NAME,
+        },
+    };
 }
 
 export function postLikersUrlGenerator(mediaId: string): string {

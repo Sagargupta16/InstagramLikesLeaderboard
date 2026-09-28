@@ -7,6 +7,7 @@ import { LikerUserNode, UserListScope } from './model/user';
 import { ScanModes } from './model/scan-modes';
 import { ResultsView } from './model/results-view';
 import {
+    PostsQuery,
     RequestError,
     assertUnreachable,
     buildLeaderboard,
@@ -141,7 +142,7 @@ const initialScanningState = (scanModes: ScanModes): ScanningState => ({
     followerCount: 0,
 });
 
-const App = ({ ownerId }: { readonly ownerId: string }) => {
+const App = ({ ownerId, postsQuery }: { readonly ownerId: string; readonly postsQuery: PostsQuery }) => {
     const [state, setState] = useState<State>({ status: 'initial' });
     const [toast, setToast] = useState<ToastState>({ show: false, text: '' });
     const [savedScan, setSavedScan] = useState<SavedScan | null>(() => loadScanResults(ownerId));
@@ -241,7 +242,7 @@ const App = ({ ownerId }: { readonly ownerId: string }) => {
 
         void (async () => {
             try {
-                const { posts, postScope } = await fetchAllPosts(requester, postsList => {
+                const { posts, postScope } = await fetchAllPosts(requester, postsQuery, postsList => {
                     updateScanning(runId, current => ({
                         ...current,
                         posts: postsList,
@@ -486,11 +487,11 @@ const App = ({ ownerId }: { readonly ownerId: string }) => {
     );
 };
 
-export function mountApp(ownerId: string): void {
+export function mountApp(ownerId: string, postsQuery: PostsQuery): void {
     document.title = 'Instagram Likes Leaderboard';
     document.body.replaceChildren();
     const appContainer = document.createElement('div');
     appContainer.id = 'ill-root';
     document.body.appendChild(appContainer);
-    render(<App ownerId={ownerId} />, appContainer);
+    render(<App ownerId={ownerId} postsQuery={postsQuery} />, appContainer);
 }
