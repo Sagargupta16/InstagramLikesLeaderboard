@@ -51,6 +51,10 @@ function parseUser(value: unknown): LikerUserNode {
         full_name: optionalString(user.full_name),
         profile_pic_url: optionalString(user.profile_pic_url),
         is_verified: user.is_verified === true,
+        ...(typeof user.is_private === 'boolean' ? { is_private: user.is_private } : {}),
+        ...(typeof user.has_anonymous_profile_picture === 'boolean'
+            ? { has_anonymous_profile_picture: user.has_anonymous_profile_picture }
+            : {}),
     };
 }
 

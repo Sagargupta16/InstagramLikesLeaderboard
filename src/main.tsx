@@ -6,6 +6,7 @@ import { State } from './model/state';
 import { LikerUserNode, UserListScope } from './model/user';
 import { ScanModes } from './model/scan-modes';
 import { ResultsView } from './model/results-view';
+import { DEFAULT_AUDIENCE_FILTERS } from './model/audience-filters';
 import {
     PostsQuery,
     RequestError,
@@ -92,11 +93,14 @@ function buildResultsState(saved: SavedScan): ResultsState {
         mostLikedPost,
         averageLikesPerPost: saved.posts.length === 0 ? 0 : totalLikes / saved.posts.length,
         posts: saved.posts,
-        hideVerified: false,
+        filters: DEFAULT_AUDIENCE_FILTERS,
         hiddenUsers: [],
         followerTab: 'dont_follow_back',
         followerSearchTerm: '',
         followerPage: 1,
+        followerSortBy: 'list',
+        dashboardAudience: 'following',
+        dashboardTopCount: 5,
     };
 }
 
@@ -428,7 +432,7 @@ const App = ({ ownerId, postsQuery }: { readonly ownerId: string; readonly posts
             const resultsContent = (() => {
                 switch (state.currentView) {
                     case 'dashboard':
-                        return <Dashboard state={state} />;
+                        return <Dashboard state={state} setState={setState} />;
                     case 'leaderboard':
                         return <Leaderboard state={state} setState={setState} />;
                     case 'follower_analysis':

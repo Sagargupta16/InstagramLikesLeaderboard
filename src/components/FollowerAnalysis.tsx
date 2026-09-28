@@ -2,8 +2,10 @@ import React, { useMemo } from 'react';
 import { State } from '../model/state';
 import { FollowerTab } from '../model/follower-tab';
 import { LikerUserNode } from '../model/user';
+import { DEFAULT_AUDIENCE_FILTERS } from '../model/audience-filters';
 import { LEADERBOARD_ENTRIES_PER_PAGE } from '../constants/constants';
-import { getMaxPage } from '../utils/utils';
+import { exportUsersAsCsv, getMaxPage, matchesAccountFilters, matchesLikesFilter } from '../utils/utils';
+import { FilterPanel } from './FilterPanel';
 
 interface FollowerAnalysisProps {
     state: State;
@@ -24,6 +26,9 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
         followerPage,
         followingScope,
         followerScope,
+        filters,
+        hiddenUsers,
+        followerSortBy,
     } = state;
 
     const categories = useMemo(() => {
@@ -57,14 +62,28 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
         [currentIds, followerUsers, followingUsers],
     );
 
+    const likesOf = (id: string) => likerMap[id]?.likesCount ?? 0;
+
     const filteredUsers = useMemo(() => {
-        if (!followerSearchTerm) { return allUsers; }
+        const hiddenSet = new Set(hiddenUsers);
         const term = followerSearchTerm.toLowerCase();
-        return allUsers.filter(u =>
-            u.username.toLowerCase().includes(term) ||
-            u.full_name.toLowerCase().includes(term),
+        const matching = allUsers.filter(u =>
+            matchesAccountFilters(u, filters, hiddenSet)
+            && (followerTab === 'ghost' || matchesLikesFilter(likerMap[u.id]?.likesCount ?? 0, filters.likes))
+            && (term === ''
+                || u.username.toLowerCase().includes(term)
+                || u.full_name.toLowerCase().includes(term)),
         );
-    }, [allUsers, followerSearchTerm]);
+        switch (followerSortBy) {
+            case 'likes':
+                return [...matching].sort((a, b) =>
+                    (likerMap[b.id]?.likesCount ?? 0) - (likerMap[a.id]?.likesCount ?? 0));
+            case 'username':
+                return [...matching].sort((a, b) => a.username.localeCompare(b.username));
+            default:
+                return matching;
+        }
+    }, [allUsers, followerSearchTerm, filters, hiddenUsers, likerMap, followerSortBy, followerTab]);
 
     const totalPages = getMaxPage(filteredUsers.length);
 
@@ -85,6 +104,8 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
         if (next < 1 || next > totalPages) { return; }
         setState({ ...state, followerPage: next });
     };
+
+    const setFollowerState = (patch: Partial<ResultsState>) => setState({ ...state, ...patch, followerPage: 1 });
 
     const tabs: Array<{ key: FollowerTab; label: string; count: number }> = [
         {
@@ -124,6 +145,33 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
                     />
                 </label>
 
+                <FilterPanel
+                    filters={filters}
+                    hiddenCount={hiddenUsers.length}
+                    users={allUsers}
+                    totalPosts={state.totalPostsScanned}
+                    showFollowsYou={false}
+                    showLikes={followerTab !== 'ghost'}
+                    onChange={next => setFollowerState({ filters: next })}
+                    onUnhideAll={() => setFollowerState({ hiddenUsers: [] })}
+                    onReset={() => setFollowerState({ filters: DEFAULT_AUDIENCE_FILTERS, hiddenUsers: [] })}
+                />
+
+                <label className='filter-field'>
+                    <span className='filter-label'>Sort by</span>
+                    <select
+                        className='filter-select'
+                        value={followerSortBy}
+                        onChange={e => setFollowerState({
+                            followerSortBy: e.currentTarget.value as ResultsState['followerSortBy'],
+                        })}
+                    >
+                        <option value='list'>Instagram order</option>
+                        <option value='likes'>Most identified likes</option>
+                        <option value='username'>Username A-Z</option>
+                    </select>
+                </label>
+
                 <div className='sidebar-pagination'>
                     <p>Pages</p>
                     <div className='pagination-controls'>
@@ -148,6 +196,19 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
                         </button>
                     </div>
                 </div>
+
+                <button
+                    type='button'
+                    className='export-btn'
+                    disabled={filteredUsers.length === 0}
+                    onClick={() => exportUsersAsCsv(
+                        filteredUsers.map(user => ({ user, likesCount: likesOf(user.id) })),
+                        tabs.find(t => t.key === followerTab)?.label ?? followerTab,
+                        `follower-analysis-${followerTab}.csv`,
+                    )}
+                >
+                    Export CSV
+                </button>
             </aside>
 
             <article className='results-container'>
@@ -165,14 +226,24 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
                     ))}
                 </div>
 
+                {filteredUsers.length !== allUsers.length && (
+                    <p className='filter-summary'>
+                        Showing {filteredUsers.length.toLocaleString()} of {allUsers.length.toLocaleString()} accounts
+                    </p>
+                )}
+
                 {pageUsers.length === 0 && (
                     <div className='empty-state'>
-                        {followerSearchTerm ? 'No results match your search.' : 'No users in this category.'}
+                        {followerSearchTerm
+                            ? 'No results match your search.'
+                            : allUsers.length > 0
+                                ? 'No accounts match the current filters.'
+                                : 'No users in this category.'}
                     </div>
                 )}
 
                 {pageUsers.map(user => {
-                    const likes = likerMap[user.id]?.likesCount ?? 0;
+                    const likes = likesOf(user.id);
                     return (
                         <div className='leaderboard-entry' key={user.id}>
                             <img
@@ -196,6 +267,15 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
                             <div className={`follower-likes-info ${likes === 0 ? 'follower-likes-empty' : ''}`}>
                                 {likes} identified likes
                             </div>
+                            <button
+                                type='button'
+                                className='entry-hide-btn'
+                                onClick={() => setFollowerState({ hiddenUsers: [...hiddenUsers, user.id] })}
+                                title='Hide this user'
+                                aria-label={`Hide ${user.username}`}
+                            >
+                                &#10005;
+                            </button>
                         </div>
                     );
                 })}

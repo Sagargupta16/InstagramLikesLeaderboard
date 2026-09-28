@@ -137,3 +137,16 @@ test('user-list scanner deduplicates users across pages', async () => {
     assert.deepEqual([...result.ids], ['1', '2']);
     assert.equal(result.users['1']?.username, 'user1');
 });
+
+test('user parser keeps optional privacy and profile photo flags only when present', async () => {
+    const requester = fakeRequester([{
+        users: [{ ...rawUser('1'), is_private: true, has_anonymous_profile_picture: false }, rawUser('2')],
+    }]);
+
+    const result = await fetchFollowing(requester, () => undefined);
+    assert.deepEqual(
+        [result.users['1']?.is_private, result.users['1']?.has_anonymous_profile_picture],
+        [true, false],
+    );
+    assert.deepEqual(Object.keys(result.users['2'] ?? {}).includes('is_private'), false);
+});

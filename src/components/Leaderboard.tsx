@@ -3,8 +3,12 @@ import { State } from '../model/state';
 import { SortField } from '../model/sort-field';
 import { LeaderboardEntry } from '../model/leaderboard-entry';
 import { TrophyIcon } from './icons/TrophyIcon';
+import { FilterPanel } from './FilterPanel';
+import { DEFAULT_AUDIENCE_FILTERS } from '../model/audience-filters';
 import {
     filterLeaderboard,
+    matchesAccountFilters,
+    matchesLikesFilter,
     sortLeaderboard,
     getMaxPage,
     getEntriesForPage,
@@ -88,14 +92,17 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
         currentTab,
         followingLeaderboard,
         notFollowingLeaderboard,
-        hideVerified,
+        filters,
         hiddenUsers,
         sortBy,
         sortDirection,
         searchTerm,
         page,
         followingScope,
+        followerScope,
+        followerIds,
     } = state;
+    const hasFollowerData = followerScope !== null;
 
     const notFollowingLabel = followingScope === 'page_limit'
         ? 'Not in returned following pages'
@@ -108,19 +115,19 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
         const source = currentTab === 'following'
             ? followingLeaderboard
             : notFollowingLeaderboard;
+        const hiddenSet = new Set(hiddenUsers);
+        const followerSet = new Set(followerIds);
+        const followsYou = hasFollowerData ? filters.followsYou : 'all';
 
-        const hiddenSet = hiddenUsers.length > 0 ? new Set(hiddenUsers) : null;
+        return source.filter(e => matchesAccountFilters(e.user, filters, hiddenSet)
+            && matchesLikesFilter(e.likesCount, filters.likes)
+            && (followsYou === 'all' || (followsYou === 'yes') === followerSet.has(e.user.id)));
+    }, [currentTab, followingLeaderboard, notFollowingLeaderboard, filters, hiddenUsers, followerIds, hasFollowerData]);
 
-        if (!hideVerified && !hiddenSet) {
-            return source;
-        }
-
-        return source.filter(e => {
-            if (hideVerified && e.user.is_verified) { return false; }
-            if (hiddenSet?.has(e.user.id)) { return false; }
-            return true;
-        });
-    }, [currentTab, followingLeaderboard, notFollowingLeaderboard, hideVerified, hiddenUsers]);
+    const tabUsers = useMemo(
+        () => (currentTab === 'following' ? followingLeaderboard : notFollowingLeaderboard).map(e => e.user),
+        [currentTab, followingLeaderboard, notFollowingLeaderboard],
+    );
 
     const sortedEntries = useMemo(
         () => sortLeaderboard(visibleEntries, sortBy, sortDirection),
@@ -193,26 +200,17 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
                     />
                 </label>
 
-                <div className='filter-controls'>
-                    <p>Filters</p>
-                    <label className='badge filter-toggle'>
-                        <input
-                            type='checkbox'
-                            checked={hideVerified}
-                            onChange={() => setState({ ...state, hideVerified: !hideVerified, page: 1 })}
-                        />
-                        <span>Hide verified accounts</span>
-                    </label>
-                    {hiddenUsers.length > 0 && (
-                        <button
-                            type='button'
-                            className='sort-direction-btn'
-                            onClick={() => setState({ ...state, hiddenUsers: [], page: 1 })}
-                        >
-                            Unhide all ({hiddenUsers.length})
-                        </button>
-                    )}
-                </div>
+                <FilterPanel
+                    filters={filters}
+                    hiddenCount={hiddenUsers.length}
+                    users={tabUsers}
+                    totalPosts={state.totalPostsScanned}
+                    showFollowsYou={hasFollowerData}
+                    showLikes
+                    onChange={next => setState({ ...state, filters: next, page: 1 })}
+                    onUnhideAll={() => setState({ ...state, hiddenUsers: [], page: 1 })}
+                    onReset={() => setState({ ...state, filters: DEFAULT_AUDIENCE_FILTERS, hiddenUsers: [], page: 1 })}
+                />
 
                 <div className='sort-controls'>
                     <p>Sort by</p>
@@ -313,9 +311,19 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
                     </button>
                 </div>
 
+                {filteredEntries.length !== tabUsers.length && (
+                    <p className='filter-summary'>
+                        Showing {filteredEntries.length.toLocaleString()} of {tabUsers.length.toLocaleString()} accounts
+                    </p>
+                )}
+
                 {pageEntries.length === 0 && (
                     <div className='empty-state'>
-                        {searchTerm ? 'No results match your search.' : 'No likers found in this category.'}
+                        {searchTerm
+                            ? 'No results match your search.'
+                            : visibleEntries.length === 0 && tabUsers.length > 0
+                                ? 'No accounts match the current filters.'
+                                : 'No likers found in this category.'}
                     </div>
                 )}
 

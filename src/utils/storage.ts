@@ -50,7 +50,10 @@ function isUser(value: unknown): value is LikerUserNode {
         && value.username !== ''
         && typeof value.full_name === 'string'
         && typeof value.profile_pic_url === 'string'
-        && typeof value.is_verified === 'boolean';
+        && typeof value.is_verified === 'boolean'
+        && (value.is_private === undefined || typeof value.is_private === 'boolean')
+        && (value.has_anonymous_profile_picture === undefined
+            || typeof value.has_anonymous_profile_picture === 'boolean');
 }
 
 function isUserRecord(value: unknown): value is Record<string, LikerUserNode> {
