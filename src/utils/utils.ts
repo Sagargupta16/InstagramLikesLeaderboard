@@ -253,6 +253,54 @@ function classifyResponse(
     return null;
 }
 
+function parseResponse(
+    response: Response,
+    body: string,
+    url: string,
+    label: string,
+    policy: Readonly<RequestPolicy>,
+    now: number,
+): unknown {
+    let payload: unknown = null;
+    let parseError: unknown = null;
+    if (body.trim() !== '') {
+        try {
+            payload = JSON.parse(body);
+        } catch (error) {
+            parseError = error;
+        }
+    }
+
+    const responseError = classifyResponse(response, payload, policy, now);
+    if (responseError) {
+        throw responseError;
+    }
+    if (parseError !== null) {
+        console.warn(`${label}: non-JSON Instagram response`, {
+            url,
+            finalUrl: response.url,
+            status: response.status,
+            contentType: response.headers.get('content-type'),
+            body: body.slice(0, 500),
+        });
+        throw new RequestError('invalid_response', `${label} returned a non-JSON response (HTTP ${response.status}).`, {
+            status: response.status,
+            originalError: parseError,
+        });
+    }
+    if (payload === null) {
+        throw new RequestError('invalid_response', 'Instagram returned an empty response.', {
+            status: response.status,
+        });
+    }
+    return payload;
+}
+
+function isRetryable(error: RequestError): boolean {
+    return error.kind === 'network'
+        || (error.kind === 'http' && error.status !== undefined && TRANSIENT_STATUSES.has(error.status));
+}
+
 async function fetchWithTimeout(
     url: string,
     fetchImpl: typeof fetch,
@@ -396,49 +444,13 @@ export function createIgRequester(options: IgRequesterOptions): IgRequester {
                         form,
                     );
                     ensureWithinRunTime();
-                    let payload: unknown = null;
-                    let parseError: unknown = null;
-                    if (body.trim() !== '') {
-                        try {
-                            payload = JSON.parse(body);
-                        } catch (error) {
-                            parseError = error;
-                        }
-                    }
-
-                    const responseError = classifyResponse(response, payload, policy, now());
-                    if (responseError) {
-                        throw responseError;
-                    }
-                    if (parseError !== null) {
-                        console.warn(`${label}: non-JSON Instagram response`, {
-                            url,
-                            finalUrl: response.url,
-                            status: response.status,
-                            contentType: response.headers.get('content-type'),
-                            body: body.slice(0, 500),
-                        });
-                        throw new RequestError('invalid_response', `${label} returned a non-JSON response (HTTP ${response.status}).`, {
-                            status: response.status,
-                            originalError: parseError,
-                        });
-                    }
-                    if (payload === null) {
-                        throw new RequestError('invalid_response', 'Instagram returned an empty response.', {
-                            status: response.status,
-                        });
-                    }
-                    return payload as T;
+                    return parseResponse(response, body, url, label, policy, now()) as T;
                 } catch (error) {
                     const requestError = isRequestError(error)
                         ? error
                         : new RequestError('network', 'The Instagram request failed.', { originalError: error });
-                    const retryable = requestError.kind === 'network'
-                        || (requestError.kind === 'http'
-                            && requestError.status !== undefined
-                            && TRANSIENT_STATUSES.has(requestError.status));
 
-                    if (!retryable || attempt >= policy.maxAttempts) {
+                    if (!isRetryable(requestError) || attempt >= policy.maxAttempts) {
                         throw requestError;
                     }
                     ensureAvailable();
