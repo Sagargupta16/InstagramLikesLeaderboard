@@ -692,6 +692,13 @@ export interface UserExportRow {
     readonly likesCount: number;
 }
 
+function privateLabel(user: LikerUserNode): string {
+    if (user.is_private === undefined) {
+        return 'unknown';
+    }
+    return user.is_private ? 'yes' : 'no';
+}
+
 export function exportUsersAsCsv(rows: readonly UserExportRow[], category: string, filename: string): void {
     const header = 'Username,Full Name,Category,Identified Likes,Verified,Private\n';
     const lines = rows.map(({ user, likesCount }) => [
@@ -700,7 +707,7 @@ export function exportUsersAsCsv(rows: readonly UserExportRow[], category: strin
         csvQuote(category),
         likesCount,
         user.is_verified ? 'yes' : 'no',
-        user.is_private === undefined ? 'unknown' : user.is_private ? 'yes' : 'no',
+        privateLabel(user),
     ].join(',')).join('\n');
     downloadBlob(header + lines, 'text/csv', filename);
 }

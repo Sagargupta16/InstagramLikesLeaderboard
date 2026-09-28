@@ -31,7 +31,7 @@ interface SegmentedProps<T extends string> {
 const Segmented = <T extends string>({ label, value, options, disabled, onChange }: SegmentedProps<T>) => (
     <div className='filter-field'>
         <span className='filter-label'>{label}</span>
-        <div className='segmented' role='group' aria-label={label}>
+        <fieldset className='segmented' aria-label={label}>
             {options.map(option => (
                 <button
                     type='button'
@@ -44,7 +44,7 @@ const Segmented = <T extends string>({ label, value, options, disabled, onChange
                     {option.label}
                 </button>
             ))}
-        </div>
+        </fieldset>
     </div>
 );
 

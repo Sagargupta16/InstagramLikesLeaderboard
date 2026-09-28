@@ -1074,6 +1074,8 @@
 
     .segmented {
         display: flex;
+        min-width: 0;
+        margin: 0;
         padding: 3px;
         gap: 2px;
         background: v.$bg-primary;

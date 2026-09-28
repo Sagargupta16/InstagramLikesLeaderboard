@@ -122,6 +122,13 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
         { key: 'ghost', label: 'No Identified Likes', count: categories.ghost.length },
     ];
 
+    let emptyMessage = 'No users in this category.';
+    if (followerSearchTerm) {
+        emptyMessage = 'No results match your search.';
+    } else if (allUsers.length > 0) {
+        emptyMessage = 'No accounts match the current filters.';
+    }
+
     return (
         <section className='flex'>
             <aside className='app-sidebar'>
@@ -234,11 +241,7 @@ const FollowerAnalysisInner = ({ state, setState }: { state: ResultsState; setSt
 
                 {pageUsers.length === 0 && (
                     <div className='empty-state'>
-                        {followerSearchTerm
-                            ? 'No results match your search.'
-                            : allUsers.length > 0
-                                ? 'No accounts match the current filters.'
-                                : 'No users in this category.'}
+                        {emptyMessage}
                     </div>
                 )}
 

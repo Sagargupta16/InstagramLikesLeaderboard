@@ -175,6 +175,13 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
         setState({ ...state, currentTab: tab, page: 1, searchTerm: '' });
     };
 
+    let emptyMessage = 'No likers found in this category.';
+    if (searchTerm) {
+        emptyMessage = 'No results match your search.';
+    } else if (visibleEntries.length === 0 && tabUsers.length > 0) {
+        emptyMessage = 'No accounts match the current filters.';
+    }
+
     return (
         <section className='flex'>
             <aside className='app-sidebar'>
@@ -319,11 +326,7 @@ const LeaderboardInner = ({ state, setState }: { state: ResultsState; setState: 
 
                 {pageEntries.length === 0 && (
                     <div className='empty-state'>
-                        {searchTerm
-                            ? 'No results match your search.'
-                            : visibleEntries.length === 0 && tabUsers.length > 0
-                                ? 'No accounts match the current filters.'
-                                : 'No likers found in this category.'}
+                        {emptyMessage}
                     </div>
                 )}
 

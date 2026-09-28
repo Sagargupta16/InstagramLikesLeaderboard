@@ -135,7 +135,7 @@ export const Dashboard = ({ state, setState }: DashboardProps) => {
 
             <details className='filter-drawer' open={activeFilters > 0}>
                 <summary>
-                    Filters
+                    <span>Filters</span>
                     {activeFilters > 0 && <span className='filter-count'>{activeFilters}</span>}
                     <span className='filter-drawer-hint'>Shared with Leaderboard and Follower Analysis</span>
                 </summary>
@@ -184,7 +184,7 @@ export const Dashboard = ({ state, setState }: DashboardProps) => {
                 <div className='section-header'>
                     <h2>Top identified likers</h2>
                     <div className='section-controls'>
-                        <div className='segmented' role='group' aria-label='Top likers audience'>
+                        <fieldset className='segmented' aria-label='Top likers audience'>
                             {(['following', 'everyone'] as const).map(audience => (
                                 <button
                                     type='button'
@@ -196,7 +196,7 @@ export const Dashboard = ({ state, setState }: DashboardProps) => {
                                     {audience === 'following' ? 'You follow' : 'Everyone'}
                                 </button>
                             ))}
-                        </div>
+                        </fieldset>
                         <select
                             className='filter-select'
                             aria-label='Number of top likers'
