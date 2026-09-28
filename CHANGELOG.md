@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Shared result filters across Dashboard, Leaderboard, and Follower Analysis: hide verified, hide no profile photo, public/private, follows you, and identified-like thresholds
+- Dashboard audience breakdown and a top-likers list with a You follow / Everyone toggle and adjustable size
+- Follower Analysis sort, per-account hide, and CSV export
+- Captured optional `is_private` and `has_anonymous_profile_picture` fields from existing responses; no new requests
+
 ## [2.2.2] - 2026-09-03
 
 ### Security

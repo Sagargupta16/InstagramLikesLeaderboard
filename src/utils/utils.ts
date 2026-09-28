@@ -1,6 +1,7 @@
 import { LikerUserNode, LikerAccumulator } from '../model/user';
 import { LeaderboardEntry } from '../model/leaderboard-entry';
 import { SortField } from '../model/sort-field';
+import { AudienceFilters, LikesFilter } from '../model/audience-filters';
 import {
     IG_APP_ID,
     IG_ASBD_ID,
@@ -557,7 +558,8 @@ export function buildLeaderboard(
             continue;
         }
         entries.push({
-            user: accumulator.user,
+            // Relationship payloads carry more profile fields than liker payloads.
+            user: followingUsersData?.[id] ?? accumulator.user,
             likesCount: accumulator.likesCount,
             totalPosts,
             percentage: totalPosts === 0 ? 0 : Math.round((accumulator.likesCount / totalPosts) * 1_000) / 10,
@@ -617,6 +619,37 @@ export function filterLeaderboard(
         || entry.user.full_name.toLowerCase().includes(term));
 }
 
+// Unknown privacy or picture data (older saves) never matches a filter that asks for it.
+export function matchesAccountFilters(
+    user: LikerUserNode,
+    filters: AudienceFilters,
+    hiddenUsers: ReadonlySet<string>,
+): boolean {
+    if (hiddenUsers.has(user.id)) { return false; }
+    if (filters.hideVerified && user.is_verified) { return false; }
+    if (filters.hideNoProfilePicture && user.has_anonymous_profile_picture === true) { return false; }
+    if (filters.privacy === 'public' && user.is_private === true) { return false; }
+    if (filters.privacy === 'private' && user.is_private !== true) { return false; }
+    return true;
+}
+
+export function matchesLikesFilter(likesCount: number, filter: LikesFilter): boolean {
+    if (filter === 'any') { return true; }
+    if (filter === 'none') { return likesCount === 0; }
+    return likesCount >= filter;
+}
+
+export function countActiveFilters(filters: AudienceFilters, hiddenCount: number): number {
+    return [
+        filters.hideVerified,
+        filters.privacy !== 'all',
+        filters.hideNoProfilePicture,
+        filters.followsYou !== 'all',
+        filters.likes !== 'any',
+        hiddenCount > 0,
+    ].filter(Boolean).length;
+}
+
 export function getMaxPage(totalEntries: number): number {
     return Math.max(1, Math.ceil(totalEntries / LEADERBOARD_ENTRIES_PER_PAGE));
 }
@@ -652,6 +685,31 @@ export function exportAsCsv(entries: readonly LeaderboardEntry[], filename: stri
         `${entry.rank},${csvQuote(entry.user.username)},${csvQuote(entry.user.full_name)},${entry.likesCount},${entry.totalPosts},${entry.percentage}%`,
     ).join('\n');
     downloadBlob(header + rows, 'text/csv', filename);
+}
+
+export interface UserExportRow {
+    readonly user: LikerUserNode;
+    readonly likesCount: number;
+}
+
+function privateLabel(user: LikerUserNode): string {
+    if (user.is_private === undefined) {
+        return 'unknown';
+    }
+    return user.is_private ? 'yes' : 'no';
+}
+
+export function exportUsersAsCsv(rows: readonly UserExportRow[], category: string, filename: string): void {
+    const header = 'Username,Full Name,Category,Identified Likes,Verified,Private\n';
+    const lines = rows.map(({ user, likesCount }) => [
+        csvQuote(user.username),
+        csvQuote(user.full_name),
+        csvQuote(category),
+        likesCount,
+        user.is_verified ? 'yes' : 'no',
+        privateLabel(user),
+    ].join(',')).join('\n');
+    downloadBlob(header + lines, 'text/csv', filename);
 }
 
 export function exportAsJson(entries: readonly LeaderboardEntry[], filename: string): void {

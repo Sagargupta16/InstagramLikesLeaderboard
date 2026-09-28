@@ -6,6 +6,7 @@ import { LikerAccumulator, LikerUserNode, UserListScope } from './user';
 import { ResultsView } from './results-view';
 import { FollowerTab } from './follower-tab';
 import { ScanModes } from './scan-modes';
+import { AudienceFilters } from './audience-filters';
 
 export type ScanningPhase = 'fetching_posts' | 'fetching_likes' | 'fetching_following' | 'fetching_followers';
 
@@ -49,11 +50,15 @@ interface ResultsState {
     readonly mostLikedPost: PostNode | null;
     readonly averageLikesPerPost: number;
     readonly posts: readonly PostNode[];
-    readonly hideVerified: boolean;
+    // Shared by every results view.
+    readonly filters: AudienceFilters;
     readonly hiddenUsers: readonly string[];
     readonly followerTab: FollowerTab;
     readonly followerSearchTerm: string;
     readonly followerPage: number;
+    readonly followerSortBy: 'list' | 'likes' | 'username';
+    readonly dashboardAudience: 'following' | 'everyone';
+    readonly dashboardTopCount: number;
 }
 
 export type State =

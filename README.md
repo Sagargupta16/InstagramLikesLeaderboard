@@ -68,8 +68,10 @@ Reaching 150 posts completes with a clearly labeled recent scope. Relationship c
 ## Views
 
 - **Leaderboard:** returned liker identities split into accounts positively matched in the returned following pages and accounts without a match, with local search, filters, sort, pagination, and CSV/JSON exports. A complete following list retains the usual follow/non-follow labels.
-- **Dashboard:** posts scanned, displayed post likes, average displayed likes, identified likers, highest displayed like count, and top identified likers you follow.
-- **Follower comparison (optional):** accounts that do not follow you back, accounts you do not follow back, mutuals, and followers with no identified likes in the scanned scope. Manually loaded legacy page-limited snapshots retain qualified unmatched labels; they are not reused automatically.
+- **Dashboard:** posts scanned, displayed post likes, average displayed likes, identified likers, highest displayed like count, an audience breakdown of identified likers, and the top 5 to 50 identified likers among accounts you follow or everyone.
+- **Follower comparison (optional):** accounts that do not follow you back, accounts you do not follow back, mutuals, and followers with no identified likes in the scanned scope, with sort, hide, and CSV export. Manually loaded legacy page-limited snapshots retain qualified unmatched labels; they are not reused automatically.
+
+Filters are shared across all three views and run locally on the saved scan: hide verified accounts, hide accounts without a profile photo, public or private accounts only, follows you or not (with follower comparison), and identified-like thresholds. Privacy and profile-photo filters need a scan made with this version; older saved scans lack those fields. Follower counts are not available: Instagram's liker and relationship lists omit them, and fetching every profile would add hundreds of requests.
 
 ## Development
 

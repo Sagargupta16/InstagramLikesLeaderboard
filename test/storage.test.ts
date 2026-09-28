@@ -59,6 +59,20 @@ test('storage round-trips a valid owner-scoped schema-v3 scan', () => {
     assert.equal(loadScanResults('different-owner', storage), null);
 });
 
+test('storage accepts optional privacy flags and rejects malformed ones', () => {
+    const storage = new MemoryStorage();
+    const flagged = { ...user, is_private: true, has_anonymous_profile_picture: false };
+    const withFlags: SavedScan = { ...savedScan, followingUsers: { 'user-1': flagged } };
+    assert.equal(saveScanResults(withFlags, storage), true);
+    assert.deepEqual(loadScanResults('owner-1', storage), withFlags);
+
+    storage.setItem('ill_scan_results', JSON.stringify({
+        ...savedScan,
+        followingUsers: { 'user-1': { ...user, is_private: 'yes' } },
+    }));
+    assert.equal(loadScanResults('owner-1', storage), null);
+});
+
 test('storage rejects malformed and legacy data', () => {
     const storage = new MemoryStorage();
     storage.setItem('ill_scan_results', JSON.stringify({ ...savedScan, schemaVersion: 2 }));
