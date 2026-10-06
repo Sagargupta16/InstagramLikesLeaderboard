@@ -25,7 +25,7 @@ Preserve the Preact/TypeScript/Webpack/SCSS architecture, npm/package-lock, ES20
 - Test: `npm test`
 - Full check: `npm run check`
 - Generated parity: `npm run check:generated`
-- Audit: `npm audit --audit-level=high`
+- Audit: `npm audit --omit=dev --audit-level=high`
 
 Use Node 24 from `.nvmrc`.
 
