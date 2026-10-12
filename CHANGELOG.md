@@ -1,6 +1,10 @@
 # Changelog
 
-## [Unreleased]
+## [2.3.0] - 2026-10-13
+
+### Fixed
+
+- Pages deploy audits production dependencies only, matching CI; the full audit failed every deploy since 2026-10-06 on dev-only webpack-dev-server advisories, so the shared filters below never reached the live site.
 
 ### Added
 

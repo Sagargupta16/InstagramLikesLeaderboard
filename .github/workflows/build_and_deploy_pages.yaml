@@ -38,8 +38,10 @@ jobs:
       - name: Run checks
         run: npm run check
 
+      # Production dependencies only, same as ci.yml: dev tooling advisories without a
+      # patched release (http-proxy-middleware via webpack-dev-server) must not block deploys.
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Build site
         run: npm run build
