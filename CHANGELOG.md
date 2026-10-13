@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.3.1] - 2026-10-13
+
+### Security
+
+- Bump transitive shell-quote (webpack-dev-server -> launch-editor, dev only) from 1.10.0 to 1.12.0 for a critical advisory (Dependabot alert #44).
+
 ## [2.3.0] - 2026-10-13
 
 ### Fixed
