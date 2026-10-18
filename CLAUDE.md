@@ -9,7 +9,7 @@
 
 ## What This Is
 
-Instagram Likes Leaderboard 2.2.1 is a browser-console Preact application. Users copy one generated bundle into the console on `www.instagram.com`; it replaces the page with a local UI and calls Instagram's private v1 web endpoints using the existing browser session. There is no backend.
+Instagram Likes Leaderboard 2.3.2 is a browser-console Preact application. Users copy one generated bundle into the console on `www.instagram.com`; it replaces the page with a local UI and calls Instagram's private web GraphQL posts query and v1 likers/friendships endpoints using the existing browser session. There is no backend.
 
 Preserve the Preact/TypeScript/Webpack/SCSS architecture, npm/package-lock, ES2020 target, and single embedded production bundle. Do not add live Instagram calls to tests or CI.
 
@@ -31,7 +31,7 @@ Use Node 24 from `.nvmrc`.
 
 ## Request Contract
 
-`createIgRequester()` in `src/utils/utils.ts` owns all Instagram traffic for one run. Requests must stay sequential. Fixed policy in `src/constants/constants.ts` enforces 2–3 second gaps, a 20-second request timeout, one transient retry, 250 requests, 15 minutes, and 150 posts. Post and relationship pagination follows validated continuation cursors to the endpoint's terminal response within those global bounds.
+`createIgRequester()` in `src/utils/utils.ts` owns all Instagram traffic for one run. Requests must stay sequential. Fixed policy in `src/constants/constants.ts` enforces 2-3 second gaps, a 20-second request timeout, one transient retry, 250 requests, 15 minutes, and 150 posts. Post and relationship pagination follows validated continuation cursors to the endpoint's terminal response within those global bounds.
 
 Never retry auth, challenge/checkpoint, rate-limit/feedback, timeout, Stop, bounds, or invalid-response errors. Only network errors and HTTP 408/500/502/503/504 receive one retry. Keep the pause gate immediately before every fetch/retry. Stop must abort delays and in-flight fetches.
 

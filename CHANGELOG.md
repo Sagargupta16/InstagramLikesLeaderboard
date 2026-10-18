@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.3.2] - 2026-10-18
+
+### Changed
+
+- README adds a How It Works flowchart, an Engineering Decisions list, a desktop-browser requirement, the shared 250-request budget, and an Acknowledgements credit to davidarroyo1234/InstagramUnfollowers (#52)
+- Landing page steps note that a desktop browser with developer tools is required
+- Results notice reads "N posts scanned (all returned by Instagram)" instead of naming the old feed endpoint
+- Dev dependency patch bumps: @typescript-eslint/eslint-plugin and @typescript-eslint/parser 8.71.1 to 8.71.2, sass 1.105.1 to 1.105.2, webpack 5.111.1 to 5.112.0
+
+### Fixed
+
+- Stale 2.2.1 version strings in the README badge, landing page footer, SECURITY.md, and CLAUDE.md
+- README described the rate-limit lock as lasting until the retry time; it only lasts for the open tab, and a reload clears it
+- Webpack ts-loader rule matched any path containing `.ts`; it now matches only `.ts` and `.tsx` files
+
 ## [2.3.1] - 2026-10-13
 
 ### Security
@@ -74,7 +89,7 @@
 
 ### Changed
 
-- Fixed request pacing at randomized 2–3 second gaps across Stop/restart boundaries; removed user-editable timing controls and automatic recovery loops
+- Fixed request pacing at randomized 2-3 second gaps across Stop/restart boundaries; removed user-editable timing controls and automatic recovery loops
 - Limited transient failures to one retry and made auth, challenge, rate-limit, timeout, malformed-response, and bounds failures fatal
 - Moved host and login guards ahead of style/app initialization so unsupported pages remain untouched
 - Made scans all-or-nothing: required-request failures no longer display or save partial data

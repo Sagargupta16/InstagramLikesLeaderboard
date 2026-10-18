@@ -23,7 +23,7 @@ The generated bundle is embedded in `public/index.html` and can be audited again
 
 This project uses private, undocumented Instagram web endpoints. No implementation or delay can guarantee avoiding throttling, checkpoints, temporary restrictions, or enforcement.
 
-Version 2.2.1 uses one sequential requester with fixed 2–3 second gaps, a 20-second timeout, a 250-request/15-minute run limit, a 150-post limit, and cursor-to-terminal pagination. It retries only a network failure or HTTP 408/500/502/503/504, at most once. It does not retry authentication failures, challenge/checkpoint responses, rate limits, timeouts, malformed responses, or user cancellation.
+Version 2.3.2 uses one sequential requester with fixed 2-3 second gaps, a 20-second timeout, a 250-request/15-minute run limit, a 150-post limit, and cursor-to-terminal pagination. It retries only a network failure or HTTP 408/500/502/503/504, at most once. It does not retry authentication failures, challenge/checkpoint responses, rate limits, timeouts, malformed responses, or user cancellation.
 
 Reaching 150 posts produces a labeled recent scope and still requires every later request to succeed. Relationship collection completes only when Instagram omits the continuation cursor. Malformed or repeated cursors and any required-request failure stop the run; failed scans are not displayed or persisted. Stop aborts delay and in-flight work; Pause only prevents the next request.
 

@@ -1,6 +1,6 @@
 {
   "name": "instagram-likes-leaderboard",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "private": true,
   "scripts": {
     "dev": "npm run build && webpack serve --mode development",
@@ -18,19 +18,19 @@
   },
   "devDependencies": {
     "@types/node": "24.19.1",
-    "@typescript-eslint/eslint-plugin": "8.71.1",
-    "@typescript-eslint/parser": "8.71.1",
+    "@typescript-eslint/eslint-plugin": "8.71.2",
+    "@typescript-eslint/parser": "8.71.2",
     "css-loader": "7.1.5",
     "eslint": "9.39.5",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.1.1",
-    "sass": "1.105.1",
+    "sass": "1.105.2",
     "sass-loader": "17.0.1",
     "style-loader": "4.0.0",
     "ts-loader": "9.6.2",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
-    "webpack": "5.111.1",
+    "webpack": "5.112.0",
     "webpack-cli": "7.2.3",
     "webpack-dev-server": "6.0.0"
   },
