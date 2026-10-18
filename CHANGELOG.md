@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.4.0] - 2026-10-18
+
+### Added
+
+- Demo page (`demo.html`): the production app scans a deterministic 36-post sample account through an in-page mock of the posts, likers and friendships endpoints. No login, no network requests, and it works on phones. Only the transport and the request gap differ from a real run; the sample scan makes 43 requests.
+- Userscript build (`instagram-likes-leaderboard.user.js` and `.meta.js`) for Tampermonkey or Violentmonkey: an unminified bundle that adds a Likes Leaderboard button on instagram.com and runs the same guarded bootstrap on click
+- README screenshots (desktop and phone) and a scan animation captured from the demo by `scripts/capture-screenshots.py`
+- Social preview card (`og-card.png`) with `og:image` and `summary_large_image` tags on the landing and demo pages
+- Landing page links to the demo and the userscript
+
+### Changed
+
+- A rate-limit retry time is saved under `ill_rate_limit_until` in local storage, so the cooldown lock survives a reload or a fresh paste and clears itself once the time passes
+- `webpack.config.js` exports a `site` config (console and demo bundles) and an unminified `userscript` config; `npm run build` writes the demo bundle and userscript into `public/`
+
+### Removed
+
+- Unreferenced `assets/copy_code.png` and `assets/landing_page.png`, which showed a removed raw-bundle preview
+
 ## [2.3.2] - 2026-10-18
 
 ### Changed
