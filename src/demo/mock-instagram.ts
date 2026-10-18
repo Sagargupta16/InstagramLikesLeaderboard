@@ -45,8 +45,22 @@ function pageIndex(cursor: string | null | undefined): number {
     return Number.isInteger(index) && index >= 0 ? index : 0;
 }
 
+function formParams(body: BodyInit | null | undefined): URLSearchParams {
+    if (body instanceof URLSearchParams) {
+        return body;
+    }
+    return new URLSearchParams(typeof body === 'string' ? body : '');
+}
+
+function requestUrl(input: RequestInfo | URL): string {
+    if (typeof input === 'string') {
+        return input;
+    }
+    return input instanceof URL ? input.href : input.url;
+}
+
 function postsPage(fixture: DemoFixture, body: BodyInit | null | undefined): Response {
-    const params = body instanceof URLSearchParams ? body : new URLSearchParams(typeof body === 'string' ? body : '');
+    const params = formParams(body);
     const variables = JSON.parse(params.get('variables') ?? '{}') as { readonly after?: string | null };
     const start = pageIndex(variables.after);
     const end = Math.min(start + POSTS_PER_PAGE, fixture.posts.length);
@@ -99,7 +113,7 @@ function route(fixture: DemoFixture, url: string, init?: RequestInit): Response 
     }
 
     const relationship = /^\/api\/v1\/friendships\/([^/]+)\/(following|followers)\/$/.exec(parsed.pathname);
-    if (relationship && relationship[1] === fixture.ownerId) {
+    if (relationship?.[1] === fixture.ownerId) {
         const ids = relationship[2] === 'following' ? fixture.followingIds : fixture.followerIds;
         return relationshipPage(fixture, ids, parsed.searchParams.get('max_id'));
     }
@@ -119,7 +133,7 @@ export function createDemoFetch(fixture: DemoFixture, options: DemoFetchOptions 
             reject(abortError());
             return;
         }
-        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        const url = requestUrl(input);
         let timer: ReturnType<typeof globalThis.setTimeout>;
         const onAbort = () => {
             globalThis.clearTimeout(timer);

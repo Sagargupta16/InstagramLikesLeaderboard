@@ -97,6 +97,16 @@ const ANONYMOUS_AVATAR = svgDataUri(
     + '<circle cx="32" cy="25" r="11" fill="#7a7a85"/><path d="M12 58c2-12 10-18 20-18s18 6 20 18z" fill="#7a7a85"/></svg>',
 );
 
+function uniqueUsername(first: string, random: () => number, taken: ReadonlySet<string>): string {
+    let username = `${first.toLowerCase()}.${pick(HANDLE_WORDS, random)}`;
+    let suffix = 2;
+    while (taken.has(username)) {
+        username = `${first.toLowerCase()}.${pick(HANDLE_WORDS, random)}${suffix}`;
+        suffix++;
+    }
+    return username;
+}
+
 export function buildDemoFixture(): DemoFixture {
     const random = createRandom(SEED);
     const accounts: Record<string, DemoAccount> = {};
@@ -109,10 +119,7 @@ export function buildDemoFixture(): DemoFixture {
         const pk = String(2_000_000_001 + index);
         const first = pick(FIRST_NAMES, random);
         const last = pick(LAST_NAMES, random);
-        let username = `${first.toLowerCase()}.${pick(HANDLE_WORDS, random)}`;
-        for (let suffix = 2; usernames.has(username); suffix++) {
-            username = `${first.toLowerCase()}.${pick(HANDLE_WORDS, random)}${suffix}`;
-        }
+        const username = uniqueUsername(first, random, usernames);
         usernames.add(username);
 
         const anonymous = random() < 0.05;
