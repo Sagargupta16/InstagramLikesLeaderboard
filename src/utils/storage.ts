@@ -2,6 +2,7 @@ import { LikerAccumulator, LikerUserNode, UserListScope } from '../model/user';
 import { PostNode, PostScope } from '../model/post';
 import {
     LOCAL_STORAGE_KEY,
+    RATE_LIMIT_STORAGE_KEY,
     REQUEST_POLICY,
     SAVED_SCAN_CACHE_TTL_MS,
 } from '../constants/constants';
@@ -215,6 +216,48 @@ export function clearScanResults(storage?: StorageLike): boolean {
         console.warn('Failed to clear scan results from localStorage:', error);
         return false;
     }
+}
+
+export function saveRateLimit(retryAt: number, storage?: StorageLike): boolean {
+    try {
+        const target = getStorage(storage);
+        if (!target) {
+            return false;
+        }
+        target.setItem(RATE_LIMIT_STORAGE_KEY, JSON.stringify({ retryAt }));
+        return true;
+    } catch (error) {
+        console.warn('Failed to save the rate-limit cooldown to localStorage:', error);
+        return false;
+    }
+}
+
+export function clearRateLimit(storage?: StorageLike): void {
+    try {
+        getStorage(storage)?.removeItem(RATE_LIMIT_STORAGE_KEY);
+    } catch (error) {
+        console.warn('Failed to clear the rate-limit cooldown from localStorage:', error);
+    }
+}
+
+// Returns the saved retry time while it is still in the future; expired or malformed
+// entries are removed so they never block a later scan.
+export function loadRateLimit(storage?: StorageLike, now = Date.now()): number | null {
+    try {
+        const raw = getStorage(storage)?.getItem(RATE_LIMIT_STORAGE_KEY);
+        if (!raw) {
+            return null;
+        }
+        const parsed: unknown = JSON.parse(raw);
+        const retryAt = isRecord(parsed) ? parsed.retryAt : undefined;
+        if (typeof retryAt === 'number' && Number.isFinite(retryAt) && retryAt > now) {
+            return retryAt;
+        }
+    } catch (error) {
+        console.warn('Failed to load the rate-limit cooldown from localStorage:', error);
+    }
+    clearRateLimit(storage);
+    return null;
 }
 
 export function formatTimeSince(timestamp: number): string {

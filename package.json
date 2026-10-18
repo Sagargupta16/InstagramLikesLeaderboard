@@ -1,12 +1,12 @@
 {
   "name": "instagram-likes-leaderboard",
-  "version": "2.3.2",
+  "version": "2.4.0",
   "private": true,
   "scripts": {
     "dev": "npm run build && webpack serve --mode development",
     "build:bundle": "webpack --mode production",
     "embed": "node scripts/update-index.js public/index.html dist/dist.js",
-    "build": "npm run build:bundle && npm run embed",
+    "build": "npm run build:bundle && npm run embed && node scripts/build-pages-extras.js",
     "check:generated": "npm run build:bundle && node scripts/update-index.js --check public/index.html dist/dist.js",
     "lint": "eslint src/ \"test/**/*.ts\"",
     "typecheck": "tsc --noEmit",

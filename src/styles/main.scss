@@ -223,6 +223,19 @@
         min-width: 0;
     }
 
+    .demo-banner {
+        margin: v.$size-medium v.$size-medium 0;
+        padding: 0.7rem v.$size-medium;
+        color: v.$text-body;
+        background: v.$clr-accent-soft;
+        border: 1px solid v.$clr-accent;
+        border-radius: v.$radius-md;
+        font-size: 0.82rem;
+        line-height: 1.5;
+
+        strong { color: v.$clr-accent; }
+    }
+
     .results-notice {
         margin: v.$size-medium;
         padding: 0.8rem v.$size-medium;
