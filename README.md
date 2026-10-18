@@ -20,6 +20,7 @@ You need a desktop browser (Chrome, Edge, Firefox, or Safari) with developer too
 3. Open the browser developer console:
    - Windows/Linux: `Ctrl + Shift + J`
    - macOS: `Cmd + Option + J`
+   - Safari: turn on **Show features for web developers** in Settings > Advanced first, then press `Cmd + Option + C`
 4. Paste the copied code and press Enter.
 5. Choose the optional views you need, then select **Start scan**.
 6. Keep the tab open until the scan completes. Use **Pause** to prevent the next request or **Stop** to abort the run.
@@ -55,7 +56,7 @@ Every run uses one sequential requester. Users cannot lower its timing:
 
 Reaching 150 posts completes with a clearly labeled recent scope. Relationship collection completes only when Instagram stops returning a continuation cursor. A repeated/malformed cursor, unexpected response, missing login, timeout, Stop action, or exhausted request/time bound ends the entire run. Failed scans are never shown or saved. A 429/feedback response blocks new scans in this tab until the provided or conservative fallback retry time; a compatible cached scan can still load. The block lives only in the open tab: reloading the page or pasting the code again clears it, so wait out the time shown before you retry.
 
-The 250-request bound is shared by every phase. A 150-post scan spends about 163 requests on posts and likers (13 post pages of 12, then one liker call per post), which leaves about 87 pages for the following and follower lists combined. A large account with follower comparison on can run out of requests, and the run then saves nothing. Try again with follower comparison off.
+The 250-request bound is shared by every phase. A 150-post scan spends about 163 requests on posts and likers (13 post pages of 12, then one liker call per post), which leaves about 87 pages for the following and follower lists combined. Retried requests count against the same bound. A large account with follower comparison on can run out of requests, and the run then saves nothing. Turning follower comparison off skips only the follower list; the following list always runs, so an account that follows a lot of people can still hit the bound.
 
 ## Privacy and Saved Data
 
