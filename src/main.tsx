@@ -451,7 +451,7 @@ const App = ({ ownerId, postsQuery }: { readonly ownerId: string; readonly posts
                     <aside className='results-notice'>
                         <strong>{state.postScope === 'recent_limit'
                             ? `Recent-post limit reached (${state.totalPostsScanned} posts).`
-                            : `${state.totalPostsScanned} posts returned by the feed endpoint scanned.`}</strong>
+                            : `${state.totalPostsScanned} posts scanned (all returned by Instagram).`}</strong>
                         {state.followingScope === 'page_limit' && (
                             <>{' '}<strong>Following page limit reached ({state.followingIds.length} accounts returned).</strong></>
                         )}
