@@ -7,6 +7,7 @@ import { LikerUserNode, UserListScope } from './model/user';
 import { ScanModes } from './model/scan-modes';
 import { ResultsView } from './model/results-view';
 import { DEFAULT_AUDIENCE_FILTERS } from './model/audience-filters';
+import { RequestPolicy } from './constants/constants';
 import {
     PostsQuery,
     RequestError,
@@ -18,10 +19,13 @@ import {
 import { fetchAllPosts, fetchAllLikers, fetchFollowing, fetchFollowers } from './utils/scanner';
 import {
     SavedScan,
+    clearRateLimit,
     clearScanResults,
     formatTimeSince,
+    loadRateLimit,
     loadReusableScan,
     loadScanResults,
+    saveRateLimit,
     saveScanResults,
 } from './utils/storage';
 
@@ -38,6 +42,12 @@ interface ToastState {
     readonly show: boolean;
     readonly text: string;
     readonly style?: 'success' | 'error' | 'warning' | 'info';
+}
+
+// Demo page only: swaps the transport and pacing; every other code path is production.
+export interface DemoRuntime {
+    readonly fetchImpl: typeof fetch;
+    readonly policy: Readonly<RequestPolicy>;
 }
 
 type ResultsState = Extract<State, { status: 'results' }>;
@@ -146,12 +156,18 @@ const initialScanningState = (scanModes: ScanModes): ScanningState => ({
     followerCount: 0,
 });
 
-const App = ({ ownerId, postsQuery }: { readonly ownerId: string; readonly postsQuery: PostsQuery }) => {
+interface AppProps {
+    readonly ownerId: string;
+    readonly postsQuery: PostsQuery;
+    readonly demo?: DemoRuntime;
+}
+
+const App = ({ ownerId, postsQuery, demo }: AppProps) => {
     const [state, setState] = useState<State>({ status: 'initial' });
     const [toast, setToast] = useState<ToastState>({ show: false, text: '' });
     const [savedScan, setSavedScan] = useState<SavedScan | null>(() => loadScanResults(ownerId));
     const [scanningPaused, setScanningPaused] = useState(false);
-    const [retryAt, setRetryAt] = useState<number | null>(null);
+    const [retryAt, setRetryAt] = useState<number | null>(() => loadRateLimit());
     const scanningPausedRef = useRef(false);
     const lastRequestAtRef = useRef<number | null>(null);
     const controllerRef = useRef<AbortController | null>(null);
@@ -222,6 +238,7 @@ const App = ({ ownerId, postsQuery }: { readonly ownerId: string; readonly posts
         scanningPausedRef.current = false;
         setScanningPaused(false);
         setRetryAt(null);
+        clearRateLimit();
         setToast({ show: false, text: '' });
         setState(initialScanningState(scanModes));
 
@@ -230,6 +247,8 @@ const App = ({ ownerId, postsQuery }: { readonly ownerId: string; readonly posts
             signal: controller.signal,
             pauseRef: scanningPausedRef,
             lastRequestAtRef,
+            fetchImpl: demo?.fetchImpl,
+            policy: demo?.policy,
             onRetry: notice => {
                 const text = `${notice.label}: retrying once in ${Math.ceil(notice.delayMs / 1_000)} seconds.`;
                 setToast({ show: true, text, style: 'warning' });
@@ -352,6 +371,7 @@ const App = ({ ownerId, postsQuery }: { readonly ownerId: string; readonly posts
                     : new RequestError('invalid_response', 'The scan failed unexpectedly.', { originalError: error });
                 if (requestError.kind === 'rate_limit' && requestError.retryAt) {
                     setRetryAt(requestError.retryAt);
+                    saveRateLimit(requestError.retryAt);
                 }
                 setState({ status: 'initial' });
                 setToast({ show: true, text: scanErrorMessage(requestError), style: 'error' });
@@ -480,6 +500,12 @@ const App = ({ ownerId, postsQuery }: { readonly ownerId: string; readonly posts
                 onHome={onHome}
                 onDeleteSaved={onDeleteSaved}
             />
+            {demo && (
+                <aside className='demo-banner' role='note'>
+                    <strong>Demo mode.</strong> Generated sample data from an in-page mock of Instagram&apos;s
+                    endpoints. The real scanner and validation run with shorter request gaps; no request leaves this page.
+                </aside>
+            )}
             {markup}
             <Toast
                 show={toast.show}
@@ -491,11 +517,11 @@ const App = ({ ownerId, postsQuery }: { readonly ownerId: string; readonly posts
     );
 };
 
-export function mountApp(ownerId: string, postsQuery: PostsQuery): void {
+export function mountApp(ownerId: string, postsQuery: PostsQuery, demo?: DemoRuntime): void {
     document.title = 'Instagram Likes Leaderboard';
     document.body.replaceChildren();
     const appContainer = document.createElement('div');
     appContainer.id = 'ill-root';
     document.body.appendChild(appContainer);
-    render(<App ownerId={ownerId} postsQuery={postsQuery} />, appContainer);
+    render(<App ownerId={ownerId} postsQuery={postsQuery} demo={demo} />, appContainer);
 }

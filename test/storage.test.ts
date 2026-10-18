@@ -4,7 +4,9 @@ import { DEFAULT_SCAN_MODES } from '../src/model/scan-modes';
 import {
     SavedScan,
     clearScanResults,
+    loadRateLimit,
     loadScanResults,
+    saveRateLimit,
     saveScanResults,
 } from '../src/utils/storage';
 
@@ -124,4 +126,25 @@ test('storage deletes the saved scan', () => {
 
 test('follower comparison is off by default', () => {
     assert.equal(DEFAULT_SCAN_MODES.followerAnalysis, false);
+});
+
+test('rate-limit cooldown survives a reload until the retry time passes', () => {
+    const storage = new MemoryStorage();
+    assert.equal(loadRateLimit(storage, 1_000), null);
+
+    assert.equal(saveRateLimit(5_000, storage), true);
+    assert.equal(loadRateLimit(storage, 1_000), 5_000);
+    assert.equal(loadRateLimit(storage, 4_999), 5_000);
+
+    assert.equal(loadRateLimit(storage, 5_000), null);
+    assert.equal(storage.getItem('ill_rate_limit_until'), null);
+});
+
+test('rate-limit loader discards malformed entries', () => {
+    const storage = new MemoryStorage();
+    for (const raw of ['not json', '{"retryAt":"soon"}', '[5000]', 'null']) {
+        storage.setItem('ill_rate_limit_until', raw);
+        assert.equal(loadRateLimit(storage, 1_000), null);
+        assert.equal(storage.getItem('ill_rate_limit_until'), null);
+    }
 });

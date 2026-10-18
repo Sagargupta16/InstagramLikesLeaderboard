@@ -37,5 +37,7 @@ export const REQUEST_POLICY: Readonly<RequestPolicy> = {
 };
 
 export const LOCAL_STORAGE_KEY = 'ill_scan_results';
+// Survives reloads and re-pastes so a cooldown Instagram asked for still holds.
+export const RATE_LIMIT_STORAGE_KEY = 'ill_rate_limit_until';
 export const SAVED_SCAN_CACHE_TTL_MS = 24 * 60 * 60 * 1_000;
 export const CAPTION_PREVIEW_LENGTH = 150;

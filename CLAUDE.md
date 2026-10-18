@@ -9,7 +9,7 @@
 
 ## What This Is
 
-Instagram Likes Leaderboard 2.3.2 is a browser-console Preact application. Users copy one generated bundle into the console on `www.instagram.com`; it replaces the page with a local UI and calls Instagram's private web GraphQL posts query and v1 likers/friendships endpoints using the existing browser session. There is no backend.
+Instagram Likes Leaderboard 2.4.0 is a browser-console Preact application. Users copy one generated bundle into the console on `www.instagram.com`; it replaces the page with a local UI and calls Instagram's private web GraphQL posts query and v1 likers/friendships endpoints using the existing browser session. There is no backend.
 
 Preserve the Preact/TypeScript/Webpack/SCSS architecture, npm/package-lock, ES2020 target, and single embedded production bundle. Do not add live Instagram calls to tests or CI.
 
@@ -49,6 +49,12 @@ Displayed post-like totals come from post records. Leaderboard counts use only i
 
 Webpack emits `dist/dist.js`. `scripts/update-index.js` serializes it between the single `/*__ILL_BUNDLE_START__*/` and `/*__ILL_BUNDLE_END__*/` markers in `public/index.html`. `--check` must remain non-mutating and fail on stale content or invalid markers.
 
+`webpack.config.js` exports two configs: `site` (minified `dist/dist.js` from `src/bootstrap.ts` and `dist/demo.js` from `src/demo/demo.ts`) and `userscript` (unminified `dist/userscript.js` from the same bootstrap, because userscript hosts reject minified code). `npm run build` then runs `scripts/build-pages-extras.js`, which writes the gitignored `public/demo.js`, `public/instagram-likes-leaderboard.user.js` and `.meta.js`; the Pages workflow builds them before upload. The userscript only adds a launcher button and must never start a scan by itself.
+
+The demo (`public/demo.html`) mounts the production app through `mountApp(..., demo)` with `src/demo/mock-instagram.ts` as `fetchImpl` and `DEMO_REQUEST_POLICY`, which differs from `REQUEST_POLICY` only in the request gap. Demo code must stay out of `dist/dist.js` and the userscript; the production bootstrap never imports `src/demo/`.
+
+`scripts/capture-screenshots.py` (run with `uv run`) regenerates `docs/screenshots/*.webp` and `public/og-card.png` from a served `public/`.
+
 The landing page must not add analytics, external fonts, raw bundle previews, or unchecked clipboard fallbacks.
 
 ## Architecture
@@ -57,10 +63,11 @@ The landing page must not add analytics, external fonts, raw bundle previews, or
 - `src/main.tsx` -- app mounting, per-run orchestration, AbortController lifecycle, state transitions, derived results
 - `src/utils/utils.ts` -- requester, errors, URLs, aggregation, sorting, exports
 - `src/utils/scanner.ts` -- cursor-driven scan phases and response validation
-- `src/utils/storage.ts` -- owner-scoped schema-v3 persistence and 24-hour cache eligibility
+- `src/utils/storage.ts` -- owner-scoped schema-v3 persistence, 24-hour cache eligibility, and the persisted rate-limit retry time (`ill_rate_limit_until`)
+- `src/demo/` -- deterministic sample fixture, in-page mock transport, and the demo entry
 - `src/constants/constants.ts` -- fixed request policy and shared constants
 - `src/components/` -- functional Preact components
 - `src/styles/main.scss` -- styles scoped beneath `.ill`
-- `test/` -- mocked requester/scanner/storage/embed tests
+- `test/` -- mocked requester/scanner/storage/embed tests, demo transport and userscript wrapper tests
 
 Use single quotes, semicolons, trailing commas on multiline structures, functional components/hooks, and readonly interface fields. Keep changes surgical and prefer removing obsolete paths over adding abstractions.
