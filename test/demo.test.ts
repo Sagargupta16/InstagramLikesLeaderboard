@@ -61,6 +61,8 @@ test('the production scanner completes a full scan against the demo transport', 
             + relationshipPages(fixture.followingIds.length)
             + relationshipPages(fixture.followerIds.length),
     );
+    // README and CHANGELOG quote this number; keep them in sync if the fixture changes.
+    assert.equal(requester.requestCount, 43);
 });
 
 test('the demo transport honours Stop', async () => {
